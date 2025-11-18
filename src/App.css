@@ -11,14 +11,8 @@
   transition: all 0.3s ease-in-out;
 }
 
-/* Background personalizado */
-.bg-banner {
-  background-image: url("/images/imagem_de_fundo.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
+/* Background personalizado - removido pois arquivos da pasta public não podem ser referenciados diretamente em CSS durante o build */
+/* Use inline styles nos componentes: style={{ backgroundImage: "url('/images/imagem_de_fundo.jpg')" }} */
 
 /* Cards com fundo semi-transparente para melhor legibilidade */
 .card-overlay {
