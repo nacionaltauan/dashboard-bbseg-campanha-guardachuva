@@ -13,7 +13,7 @@
 
 /* Background personalizado */
 .bg-banner {
-  background-image: url("../public/images/Card_Banner.webp");
+  background-image: url("/images/imagem_de_fundo.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
