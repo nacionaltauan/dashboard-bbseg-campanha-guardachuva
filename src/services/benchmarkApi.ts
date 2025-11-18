@@ -16,7 +16,7 @@ export interface BenchmarkData {
 export const fetchBenchmarkNacionalData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=BENCHMARK",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=BENCHMARK",
     )
     return response.data
   } catch (error) {

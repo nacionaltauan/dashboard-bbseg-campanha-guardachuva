@@ -97,7 +97,7 @@ export const fetchResumoData = async () => {
 export const fetchEstrategiaOnlineData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=Resumo",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Resumo",
     )
     return response.data
   } catch (error) {
@@ -906,7 +906,7 @@ export const useBenchmarkData = () => {
 export const fetchConsolidadoNacionalData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=Consolidado",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=CONSOLIDADO",
     )
     return response.data
   } catch (error) {
@@ -918,7 +918,7 @@ export const fetchConsolidadoNacionalData = async () => {
 export const fetchTikTokNacionalData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=TikTok",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Tiktok_tratado",
     )
     return response.data
   } catch (error) {
@@ -1019,7 +1019,7 @@ export const usePinterestNacionalData = () => {
 export const fetchMetaTratadoData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=Meta%20-%20Tratado",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta_tratado",
     )
     return response.data
   } catch (error) {
@@ -1032,7 +1032,7 @@ export const fetchMetaTratadoData = async () => {
 export const fetchMetaNaoTratadoData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=Meta%20Não%20tratado",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta%20nao%20tratado",
     )
     return response.data
   } catch (error) {
