@@ -12,7 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat z-0"
         style={{
-          backgroundImage: "url('/images/banner-background.webp')",
+          backgroundImage: "url('/images/imagem_de_fundo.jpg')",
         }}
       >
         {/* Overlay para melhorar a legibilidade */}
