@@ -617,11 +617,6 @@ const CriativosTikTok: React.FC = () => {
                         <p className="text-xs text-gray-500 mt-1 leading-tight whitespace-normal break-words">
                           {creative.campaignName}
                         </p>
-                        {creative.adText && (
-                          <p className="text-xs text-gray-400 mt-1 leading-tight whitespace-normal break-words">
-                            {creative.adText.length > 100 ? creative.adText.substring(0, 100) + "..." : creative.adText}
-                          </p>
-                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right font-semibold min-w-[7.5rem]">

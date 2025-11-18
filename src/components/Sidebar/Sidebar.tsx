@@ -120,7 +120,7 @@ const Sidebar: React.FC = () => {
               />
             </div>
             {isExpanded && (
-              <span className="ml-3 font-semibold text-gray-800 whitespace-nowrap">Dashboard CCBB 2</span>
+              <span className="ml-3 font-semibold text-gray-800 whitespace-nowrap">dash guarda-chuva</span>
             )}
           </div>
         </div>
