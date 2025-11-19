@@ -27,7 +27,7 @@ interface DataPoint {
   totalEngagements: number
   veiculo: string
   tipoCompra: string
-  praca: string
+  modalidade: string
 }
 
 interface ChartData {
@@ -58,8 +58,8 @@ const LinhaTempo: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<
     "impressions" | "clicks" | "totalSpent" | "videoViews" | "cpm" | "cpc" | "ctr" | "vtr"
   >("impressions")
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
 
   const platformColors: Record<string, string> = {
     TikTok: "#ff0050",
@@ -106,7 +106,8 @@ const LinhaTempo: React.FC = () => {
             .replace(",", ".")
             .trim()
           const parsed = Number.parseFloat(cleanValue)
-          return isNaN(parsed) ? 0 : parsed
+          // Arredondar para 2 casas decimais para evitar erros de precisão
+          return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
         }
 
         const parseInteger = (value: string | number) => {
@@ -140,7 +141,7 @@ const LinhaTempo: React.FC = () => {
         const videoCompletions = item["Video completions "]
         const tipoCompra = item["Tipo de Compra"]
         const veiculo = item["Veículo"]
-        const praca = item["Praça"] || "Nacional"
+        const modalidade = item["Modalidade"] || "Nacional"
 
         const dataPoint: DataPoint = {
           date: parseDate(date) || "",
@@ -160,7 +161,7 @@ const LinhaTempo: React.FC = () => {
           totalEngagements: parseInteger(item["Total engagements"]) || 0,
           veiculo: veiculo || "Outros",
           tipoCompra: tipoCompra || "",
-          praca: praca,
+          modalidade: modalidade,
         }
 
         return dataPoint
@@ -211,15 +212,15 @@ const LinhaTempo: React.FC = () => {
         filtered = filtered.filter((item) => selectedVehicles.includes(item.platform))
       }
 
-      if (selectedPracas.length > 0) {
-        filtered = filtered.filter((item) => selectedPracas.includes(item.praca))
+      if (selectedModalidades.length > 0) {
+        filtered = filtered.filter((item) => selectedModalidades.includes(item.modalidade))
       }
 
       setFilteredData(filtered)
     } else {
       setFilteredData([])
     }
-  }, [processedData, dateRange, selectedVehicles, selectedPracas])
+  }, [processedData, dateRange, selectedVehicles, selectedModalidades])
 
   const getMetricValue = (item: DataPoint, metric: typeof selectedMetric): number => {
     switch (metric) {
@@ -239,7 +240,13 @@ const LinhaTempo: React.FC = () => {
     const calculateCompositeMetric = (dayData: DataPoint[], metric: typeof selectedMetric): number => {
       if (!dayData || dayData.length === 0) return 0
 
-      const totalCost = dayData.reduce((sum, item) => sum + (item.totalSpent || 0), 0)
+      // Usar arredondamento para evitar erros de precisão em valores monetários
+      const totalCostInCents = dayData.reduce((sum, item) => {
+        const cents = Math.round((item.totalSpent || 0) * 100)
+        return sum + cents
+      }, 0)
+      const totalCost = totalCostInCents / 100
+      
       const totalImpressions = dayData.reduce((sum, item) => sum + (item.impressions || 0), 0)
       const totalClicks = dayData.reduce((sum, item) => sum + (item.clicks || 0), 0)
       const totalViews = dayData.reduce((sum, item) => sum + (item.videoViews || item.videoCompletions || 0), 0)
@@ -323,7 +330,15 @@ const LinhaTempo: React.FC = () => {
   }, [processedData])
 
   // Cálculos para as métricas principais
-  const totalInvestment = useMemo(() => filteredData.reduce((sum, item) => sum + item.totalSpent, 0), [filteredData])
+  // Usar arredondamento para evitar erros de precisão de ponto flutuante em valores monetários
+  const totalInvestment = useMemo(() => {
+    // Converter para centavos, somar, e converter de volta para reais
+    const totalInCents = filteredData.reduce((sum, item) => {
+      const cents = Math.round(item.totalSpent * 100)
+      return sum + cents
+    }, 0)
+    return totalInCents / 100
+  }, [filteredData])
   const totalImpressions = useMemo(() => filteredData.reduce((sum, item) => sum + item.impressions, 0), [filteredData])
   const totalClicks = useMemo(() => filteredData.reduce((sum, item) => sum + item.clicks, 0), [filteredData])
 
@@ -365,24 +380,24 @@ const LinhaTempo: React.FC = () => {
     })
   }
 
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
   useEffect(() => {
     if (processedData.length > 0) {
-      const pracaSet = new Set<string>()
+      const modalidadeSet = new Set<string>()
       processedData.forEach((item) => {
-        if (item.praca && item.praca.trim() !== "") { pracaSet.add(item.praca) }
+        if (item.modalidade && item.modalidade.trim() !== "") { modalidadeSet.add(item.modalidade) }
       })
-      const pracas = Array.from(pracaSet).filter(Boolean)
-      setAvailablePracas(pracas)
-      setSelectedPracas([])
+      const modalidades = Array.from(modalidadeSet).filter(Boolean)
+      setAvailableModalidades(modalidades)
+      setSelectedModalidades([])
     }
   }, [processedData])
 
@@ -497,20 +512,20 @@ const LinhaTempo: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              <MapPin className="w-4 h-4 mr-2" /> Praças
+              <MapPin className="w-4 h-4 mr-2" /> Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-blue-100 text-blue-800 border border-blue-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

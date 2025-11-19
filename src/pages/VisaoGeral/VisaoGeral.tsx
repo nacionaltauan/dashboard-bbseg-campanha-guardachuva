@@ -19,7 +19,7 @@ interface ApiDataItem {
   clicks?: number
   frequency?: number
   cpm?: number
-  praca?: string
+  modalidade?: string
 }
 
 interface ProcessedData {
@@ -32,7 +32,7 @@ interface ProcessedData {
   clicks: number
   frequency: number
   cpm: number
-  praca: string
+  modalidade: string
 }
 
 interface PlatformMetrics {
@@ -61,7 +61,7 @@ const VisaoGeral: React.FC = () => {
   const [processedData, setProcessedData] = useState<ProcessedData[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
 
   // Cores para as plataformas
   const platformColors: Record<string, string> = {
@@ -85,12 +85,12 @@ const VisaoGeral: React.FC = () => {
     return Array.from(platforms)
   }, [processedData])
 
-  const availablePracas = useMemo(() => {
-    const pracas = new Set<string>()
+  const availableModalidades = useMemo(() => {
+    const modalidades = new Set<string>()
     processedData.forEach((item) => {
-      pracas.add(item.praca)
+      modalidades.add(item.modalidade)
     })
-    return Array.from(pracas)
+    return Array.from(modalidades)
   }, [processedData])
 
   // Processar dados de benchmark
@@ -111,12 +111,12 @@ const VisaoGeral: React.FC = () => {
     })
   }
 
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       } else {
-        return [...prev, praca]
+        return [...prev, modalidade]
       }
     })
   }
@@ -162,7 +162,7 @@ const VisaoGeral: React.FC = () => {
             clicks: parseInteger(row[headers.indexOf("Clicks")]),
             frequency: 1, // Será calculado depois
             cpm: 0, // Será calculado depois
-            praca: row[headers.indexOf("Praça")] || "Nacional",
+            modalidade: row[headers.indexOf("Modalidade")] || "Nacional",
           }
         })
         .filter((item: ProcessedData) => item.date && item.impressions > 0)
@@ -222,15 +222,15 @@ const VisaoGeral: React.FC = () => {
         filtered = filtered.filter((item) => selectedPlatforms.includes(item.platform))
       }
 
-      if (selectedPracas.length > 0) {
-        filtered = filtered.filter((item) => selectedPracas.includes(item.praca))
+      if (selectedModalidades.length > 0) {
+        filtered = filtered.filter((item) => selectedModalidades.includes(item.modalidade))
       }
 
       setFilteredData(filtered)
     } else {
       setFilteredData([])
     }
-  }, [processedData, dateRange, selectedPlatforms, selectedPracas])
+  }, [processedData, dateRange, selectedPlatforms, selectedModalidades])
 
   // Identificar veículos disponíveis nos dados filtrados
   const availableVehicles = useMemo(() => {
@@ -751,24 +751,24 @@ const VisaoGeral: React.FC = () => {
             </div>
           </div>
 
-          {/* Filtro de Praças */}
+          {/* Filtro de Modalidades */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças
+              Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-blue-100 text-blue-800 border border-blue-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

@@ -36,7 +36,7 @@ interface DataPoint {
   totalEngagements: number
   veiculo: string
   tipoCompra: string
-  praca: string
+  modalidade: string
 }
 
 interface ChartData {
@@ -94,7 +94,7 @@ const AnaliseSemanal: React.FC<AnaliseSemanalProps> = ({
   const [selectedMetric, setSelectedMetric] = useState<
     "impressions" | "clicks" | "views" | "cpm" | "cpc" | "cpv" | "ctr" | "vtr"
   >("impressions")
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   // Função para criar datas locais sem problemas de timezone
   const createLocalDate = (dateStr: string) => {
     if (!dateStr) return new Date()
@@ -137,14 +137,14 @@ const AnaliseSemanal: React.FC<AnaliseSemanalProps> = ({
       }
     }
 
-    const pracaSet = new Set<string>()
+    const modalidadeSet = new Set<string>()
     processedData.forEach((item) => {
-      if (item.praca && item.praca.trim() !== "") {
-        pracaSet.add(item.praca)
+      if (item.modalidade && item.modalidade.trim() !== "") {
+        modalidadeSet.add(item.modalidade)
       }
     })
-    const pracas = Array.from(pracaSet).filter(Boolean)
-    setAvailablePracas(pracas)
+    const modalidades = Array.from(modalidadeSet).filter(Boolean)
+    setAvailableModalidades(modalidades)
   }, [processedData])
 
   // Função para obter dados baseado no período selecionado
@@ -188,7 +188,12 @@ const AnaliseSemanal: React.FC<AnaliseSemanalProps> = ({
 
   // Calcular métricas semanais com tratamento de valores zerados
   const calculateWeeklyMetrics = (data: DataPoint[]): WeeklyMetrics => {
-    const totalInvestment = data.reduce((sum, item) => sum + (item.totalSpent || 0), 0)
+    // Usar arredondamento para evitar erros de precisão em valores monetários
+    const totalInvestmentInCents = data.reduce((sum, item) => {
+      const cents = Math.round((item.totalSpent || 0) * 100)
+      return sum + cents
+    }, 0)
+    const totalInvestment = totalInvestmentInCents / 100
     const totalImpressions = data.reduce((sum, item) => sum + (item.impressions || 0), 0)
     const totalClicks = data.reduce((sum, item) => sum + (item.clicks || 0), 0)
     const totalViews = data.reduce((sum, item) => sum + (item.videoViews || item.videoCompletions || 0), 0)
@@ -281,15 +286,27 @@ const AnaliseSemanal: React.FC<AnaliseSemanalProps> = ({
         case "views":
           return dayData.reduce((sum, item) => sum + (item.videoViews || item.videoCompletions || 0), 0)
         case "cpm":
-          const totalCost = dayData.reduce((sum, item) => sum + (item.totalSpent || 0), 0)
+          const totalCostInCents = dayData.reduce((sum, item) => {
+            const cents = Math.round((item.totalSpent || 0) * 100)
+            return sum + cents
+          }, 0)
+          const totalCost = totalCostInCents / 100
           const totalImpressions = dayData.reduce((sum, item) => sum + (item.impressions || 0), 0)
           return totalImpressions > 0 ? (totalCost / totalImpressions) * 1000 : 0
         case "cpc":
-          const totalCostCpc = dayData.reduce((sum, item) => sum + (item.totalSpent || 0), 0)
+          const totalCostCpcInCents = dayData.reduce((sum, item) => {
+            const cents = Math.round((item.totalSpent || 0) * 100)
+            return sum + cents
+          }, 0)
+          const totalCostCpc = totalCostCpcInCents / 100
           const totalClicksCpc = dayData.reduce((sum, item) => sum + (item.clicks || 0), 0)
           return totalClicksCpc > 0 ? totalCostCpc / totalClicksCpc : 0
         case "cpv":
-          const totalCostCpv = dayData.reduce((sum, item) => sum + (item.totalSpent || 0), 0)
+          const totalCostCpvInCents = dayData.reduce((sum, item) => {
+            const cents = Math.round((item.totalSpent || 0) * 100)
+            return sum + cents
+          }, 0)
+          const totalCostCpv = totalCostCpvInCents / 100
           const totalViewsCpv = dayData.reduce((sum, item) => sum + (item.videoViews || item.videoCompletions || 0), 0)
           return totalViewsCpv > 0 ? totalCostCpv / totalViewsCpv : 0
         case "ctr":

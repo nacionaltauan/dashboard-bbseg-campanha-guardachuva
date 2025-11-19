@@ -89,8 +89,8 @@ const CriativosMeta: FC = () => {
   const [processedData, setProcessedData] = useState<CreativeData[]>([])
   const [processedDataUntreated, setProcessedDataUntreated] = useState<CreativeDataUntreated[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   const [selectedFormatos, setSelectedFormatos] = useState<string[]>([])
   const [availableFormatos, setAvailableFormatos] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'overview' | 'format'>('overview')
@@ -416,49 +416,48 @@ const CriativosMeta: FC = () => {
         setDateRange({ start: startDate, end: endDate })
       }
 
-      // Detectar praças disponíveis baseadas nos criativos
-      const pracaSet = new Set<string>()
+      // Detectar modalidades disponíveis baseadas nos criativos
+      const modalidadeSet = new Set<string>()
       processed.forEach((item) => {
-        const detectedPraca = detectPracaFromCreative(item.creativeTitle)
-        if (detectedPraca) {
-          pracaSet.add(detectedPraca)
+        const detectedModalidade = detectModalidadeFromCreative(item.creativeTitle)
+        if (detectedModalidade) {
+          modalidadeSet.add(detectedModalidade)
         }
       })
-      const pracas = Array.from(pracaSet).filter(Boolean).sort()
-      setAvailablePracas(pracas)
+      const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
+      setAvailableModalidades(modalidades)
     }
   }, [apiData])
 
-  // Função para detectar praça baseada no nome do criativo
-  const detectPracaFromCreative = (creativeTitle: string): string | null => {
+  // Função para detectar modalidade baseada no nome do criativo
+  const detectModalidadeFromCreative = (creativeTitle: string): string | null => {
     if (!creativeTitle) return null
     
-    const upperCreative = creativeTitle.toUpperCase()
+    // Converter para minúsculo para padronizar a checagem
+    const lowerCreative = creativeTitle.toLowerCase()
     
-    // Regras para São Paulo
-    if (upperCreative.includes("SP MEME")) {
-      return "São Paulo"
+    // Regras de modalidade
+    if (lowerCreative.includes("empresarial")) {
+      return "empresarial"
     }
     
-    // Regras para Belo Horizonte
-    if (upperCreative.includes("BH FULLGAS")) {
-      return "Belo Horizonte"
+    if (lowerCreative.includes("residencial")) {
+      return "residencial"
     }
     
-    // Regras para Rio de Janeiro
-    if (upperCreative.includes("RJ")) {
-      return "Rio de Janeiro"
+    if (lowerCreative.includes("vida")) {
+      return "vida"
     }
     
     return null
   }
 
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
@@ -498,11 +497,11 @@ const CriativosMeta: FC = () => {
       })
     }
 
-    // Filtro por praça
-    if (selectedPracas.length > 0) {
+    // Filtro por modalidade
+    if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const detectedPraca = detectPracaFromCreative(item.creativeTitle)
-        return detectedPraca && selectedPracas.includes(detectedPraca)
+        const detectedModalidade = detectModalidadeFromCreative(item.creativeTitle)
+        return detectedModalidade && selectedModalidades.includes(detectedModalidade)
       })
     }
 
@@ -559,7 +558,7 @@ const CriativosMeta: FC = () => {
     finalData.sort((a, b) => b.totalSpent - a.totalSpent)
 
     return finalData
-  }, [processedData, processedDataUntreated, dateRange, selectedPracas, selectedFormatos, viewMode])
+  }, [processedData, processedDataUntreated, dateRange, selectedModalidades, selectedFormatos, viewMode])
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
@@ -780,20 +779,20 @@ const CriativosMeta: FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças
+              Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-blue-100 text-blue-800 border border-blue-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

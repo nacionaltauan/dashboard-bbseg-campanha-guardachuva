@@ -21,7 +21,7 @@ interface ProcessedData {
   visualizacoes100: number
   cpv: number
   vtr100: number
-  praca: string
+  modalidade: string
 }
 
 interface PlatformMetrics {
@@ -49,8 +49,8 @@ const Alcance: React.FC = () => {
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [availablePlatforms, setAvailablePlatforms] = useState<string[]>([])
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
 
   // Cores para as plataformas
   const platformColors: Record<string, string> = {
@@ -153,7 +153,7 @@ const Alcance: React.FC = () => {
               visualizacoes100: parseInteger(item["Video completions "]) || parseInteger(item["Video views "]), // Note o espaço no final
               cpv: 0, // Será calculado depois
               vtr100: 0, // Será calculado depois
-              praca: item["Praça"] || "Outros",
+              modalidade: item["Modalidade"] || "Outros",
             } as ProcessedData
           })
           .filter((item: ProcessedData) => item.date && item.impressions > 0)
@@ -194,23 +194,23 @@ const Alcance: React.FC = () => {
         setAvailablePlatforms(platforms)
         setSelectedPlatforms([])
 
-        // Extrair praças únicas
-        const pracaSet = new Set<string>()
+        // Extrair modalidades únicas
+        const modalidadeSet = new Set<string>()
         processed.forEach((item) => {
-          if (item.praca) {
-            pracaSet.add(item.praca)
+          if (item.modalidade) {
+            modalidadeSet.add(item.modalidade)
           }
         })
-        const pracas = Array.from(pracaSet).filter(Boolean)
-        setAvailablePracas(pracas)
-        setSelectedPracas([])
+        const modalidades = Array.from(modalidadeSet).filter(Boolean)
+        setAvailableModalidades(modalidades)
+        setSelectedModalidades([])
       } catch (error) {
         console.error("Erro ao processar dados:", error)
       }
     }
   }, [apiData])
 
-  // Filtrar dados por data, plataforma e praça
+  // Filtrar dados por data, plataforma e modalidade
   const filteredData = useMemo(() => {
     let filtered = processedData
 
@@ -237,13 +237,13 @@ const Alcance: React.FC = () => {
       filtered = filtered.filter((item) => selectedPlatforms.includes(item.platform))
     }
 
-    // Filtro por praça
-    if (selectedPracas.length > 0) {
-      filtered = filtered.filter((item) => selectedPracas.includes(item.praca))
+    // Filtro por modalidade
+    if (selectedModalidades.length > 0) {
+      filtered = filtered.filter((item) => selectedModalidades.includes(item.modalidade))
     }
 
     return filtered
-  }, [processedData, dateRange, selectedPlatforms, selectedPracas])
+  }, [processedData, dateRange, selectedPlatforms, selectedModalidades])
 
   // Calcular alcance e frequência totais de TikTok e Meta das abas específicas
   const alcanceTotals = useMemo(() => {
@@ -464,13 +464,13 @@ const Alcance: React.FC = () => {
     })
   }
 
-  // Função para alternar seleção de praça
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  // Função para alternar seleção de modalidade
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
@@ -663,24 +663,24 @@ const Alcance: React.FC = () => {
             </div>
           </div>
 
-          {/* Filtro de Praça */}
+          {/* Filtro de Modalidade */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praça
+              Modalidade
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-green-100 text-green-800 border border-green-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

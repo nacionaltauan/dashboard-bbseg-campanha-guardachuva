@@ -8,7 +8,7 @@ import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadBut
 import Loading from "../../components/Loading/Loading"
 
 interface VehicleData {
-  praca: string
+  modalidade: string
   veiculo: string
   mes: string
   custoInvestido: number
@@ -31,7 +31,7 @@ interface CampaignSummary {
 }
 
 interface AggregatedVehicleData {
-  praca: string
+  modalidade: string
   veiculo: string
   custoInvestido: number
   custoPrevisto: number
@@ -47,8 +47,8 @@ const EstrategiaOnline: React.FC = () => {
   const [mesesTotals, setMesesTotals] = useState<MesTotals[]>([])
   const [selectedMes, setSelectedMes] = useState<string | null>(null)
   const [availableMeses, setAvailableMeses] = useState<string[]>([])
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   const [campaignSummary, setCampaignSummary] = useState<CampaignSummary>({
     totalInvestimentoPrevisto: 0,
     totalCustoInvestido: 0,
@@ -115,7 +115,7 @@ const EstrategiaOnline: React.FC = () => {
           const custoPrevisto = parseMonetaryValue(row[4]) // Coluna "Custo Previsto" (E)
 
           return {
-            praca: row[0] || "", // Primeira coluna (Praça)
+            modalidade: row[0] || "", // Primeira coluna (Modalidade)
             veiculo: row[1] || "", // Segunda coluna (Veículo)
             mes: row[2] || "", // Terceira coluna (MÊS)
             custoInvestido,
@@ -154,11 +154,11 @@ const EstrategiaOnline: React.FC = () => {
         .sort()
       setAvailableMeses(meses)
 
-      // Extrair praças únicas
-      const pracas = Array.from(new Set(processed.map((item) => item.praca)))
+      // Extrair modalidades únicas
+      const modalidades = Array.from(new Set(processed.map((item) => item.modalidade)))
         .filter(Boolean)
         .sort()
-      setAvailablePracas(pracas)
+      setAvailableModalidades(modalidades)
 
       // Calcular resumo da campanha
       const totalGeralPrevisto = processed.reduce((sum, v) => sum + v.custoPrevisto, 0)
@@ -180,17 +180,17 @@ const EstrategiaOnline: React.FC = () => {
     let filteredData = selectedMes ? vehicleData.filter((vehicle) => vehicle.mes === selectedMes) : vehicleData
     
     // Aplicar filtro de praça
-    if (selectedPracas.length > 0) {
-      filteredData = filteredData.filter((vehicle) => selectedPracas.includes(vehicle.praca))
+    if (selectedModalidades.length > 0) {
+      filteredData = filteredData.filter((vehicle) => selectedModalidades.includes(vehicle.modalidade))
     }
 
     const aggregated: Record<string, AggregatedVehicleData> = {}
 
     filteredData.forEach((vehicle) => {
-      const key = `${vehicle.praca}_${vehicle.veiculo}`
+      const key = `${vehicle.modalidade}_${vehicle.veiculo}`
       if (!aggregated[key]) {
         aggregated[key] = {
-          praca: vehicle.praca,
+          modalidade: vehicle.modalidade,
           veiculo: vehicle.veiculo,
           custoInvestido: 0,
           custoPrevisto: 0,
@@ -213,7 +213,7 @@ const EstrategiaOnline: React.FC = () => {
     })
 
     return Object.values(aggregated).sort((a, b) => b.custoPrevisto - a.custoPrevisto)
-  }, [vehicleData, selectedMes, selectedPracas])
+  }, [vehicleData, selectedMes, selectedModalidades])
 
   // Calcular totais filtrados
   const filteredTotals = useMemo(() => {
@@ -243,12 +243,12 @@ const EstrategiaOnline: React.FC = () => {
     return value.toLocaleString("pt-BR")
   }
 
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
@@ -289,26 +289,26 @@ const EstrategiaOnline: React.FC = () => {
         </div>
       </div>
 
-      {/* Filtro de Praça */}
+      {/* Filtro de Modalidade */}
       <div className="card-overlay rounded-lg shadow-lg p-4">
         <div className="flex items-center space-x-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças
+              Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-blue-100 text-blue-800 border border-blue-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>
@@ -435,7 +435,7 @@ const EstrategiaOnline: React.FC = () => {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[15%]">Praça</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[15%]">Modalidade</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[15%]">Veículo</th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[18%]">Investimento Previsto</th>
                 <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[12%]">Share (%)</th>
@@ -447,7 +447,7 @@ const EstrategiaOnline: React.FC = () => {
               {aggregatedVehicleData.map((vehicle, index) => (
                 <tr key={index} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                   <td className="py-4 px-4">
-                    <span className="font-medium text-gray-900">{vehicle.praca}</span>
+                    <span className="font-medium text-gray-900">{vehicle.modalidade}</span>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-3">

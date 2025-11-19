@@ -45,8 +45,8 @@ const CriativosTikTok: React.FC = () => {
   const { data: benchmarkData, loading: benchmarkLoading } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<CreativeData[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   const [selectedTipos, setSelectedTipos] = useState<string[]>([])
   const [availableTipos, setAvailableTipos] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -160,16 +160,16 @@ const CriativosTikTok: React.FC = () => {
       })
     }
 
-    // Detectar praças disponíveis baseadas nos criativos
-    const pracaSet = new Set<string>()
+    // Detectar modalidades disponíveis baseadas nos criativos
+    const modalidadeSet = new Set<string>()
     processed.forEach((item) => {
-      const detectedPraca = detectPracaFromCreative(item.adName)
-      if (detectedPraca) {
-        pracaSet.add(detectedPraca)
+      const detectedModalidade = detectModalidadeFromCreative(item.adName)
+      if (detectedModalidade) {
+        modalidadeSet.add(detectedModalidade)
       }
     })
-    const pracas = Array.from(pracaSet).filter(Boolean).sort()
-    setAvailablePracas(pracas)
+    const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
+    setAvailableModalidades(modalidades)
 
     // Detectar tipos disponíveis baseados nos criativos
     const tipoSet = new Set<string>()
@@ -181,36 +181,35 @@ const CriativosTikTok: React.FC = () => {
     setAvailableTipos(tipos)
   }, [apiData])
 
-  // Função para detectar praça baseada no nome do criativo
-  const detectPracaFromCreative = (adName: string): string | null => {
+  // Função para detectar modalidade baseada no nome do criativo
+  const detectModalidadeFromCreative = (adName: string): string | null => {
     if (!adName) return null
     
-    const upperAdName = adName.toUpperCase()
+    // Converter para minúsculo para padronizar a checagem
+    const lowerAdName = adName.toLowerCase()
     
-    // Regras para São Paulo
-    if (upperAdName.includes("SP MEME")) {
-      return "São Paulo"
+    // Regras de modalidade
+    if (lowerAdName.includes("empresarial")) {
+      return "empresarial"
     }
     
-    // Regras para Belo Horizonte
-    if (upperAdName.includes("BH FULLGAS")) {
-      return "Belo Horizonte"
+    if (lowerAdName.includes("residencial")) {
+      return "residencial"
     }
     
-    // Regras para Rio de Janeiro
-    if (upperAdName.includes("RJ")) {
-      return "Rio de Janeiro"
+    if (lowerAdName.includes("vida")) {
+      return "vida"
     }
     
     return null
   }
 
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
@@ -251,11 +250,11 @@ const CriativosTikTok: React.FC = () => {
       })
     }
 
-    // Filtro por praça
-    if (selectedPracas.length > 0) {
+    // Filtro por modalidade
+    if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const detectedPraca = detectPracaFromCreative(item.adName)
-        return detectedPraca && selectedPracas.includes(detectedPraca)
+        const detectedModalidade = detectModalidadeFromCreative(item.adName)
+        return detectedModalidade && selectedModalidades.includes(detectedModalidade)
       })
     }
 
@@ -303,7 +302,7 @@ const CriativosTikTok: React.FC = () => {
     finalData.sort((a, b) => b.cost - a.cost)
 
     return finalData
-  }, [processedData, dateRange, selectedPracas, selectedTipos])
+  }, [processedData, dateRange, selectedModalidades, selectedTipos])
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
@@ -440,20 +439,20 @@ const CriativosTikTok: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças
+              Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-pink-100 text-pink-800 border border-pink-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

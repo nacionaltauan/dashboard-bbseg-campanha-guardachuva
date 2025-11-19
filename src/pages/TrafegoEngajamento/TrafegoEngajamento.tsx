@@ -68,7 +68,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
   })
 
   const [selectedColunaQ, setSelectedColunaQ] = useState<string[]>([])
-  const [selectedPraca, setSelectedPraca] = useState<string[]>([])
+  const [selectedModalidade, setSelectedModalidade] = useState<string[]>([])
 
   // Função para normalizar data para formato YYYY-MM-DD
   const normalizeDate = (dateStr: string | number | undefined | null): string | null => {
@@ -161,22 +161,22 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [ga4ReceptivosData])
 
-  // Função para obter valores únicos da coluna Praça da aba GA4_receptivos
-  const valoresPracaGA4 = useMemo(() => {
+  // Função para obter valores únicos da coluna Modalidade da aba GA4_receptivos
+  const valoresModalidadeGA4 = useMemo(() => {
     if (!ga4ReceptivosData?.data?.values || ga4ReceptivosData.data.values.length <= 1) {
       return []
     }
 
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
-    const pracaIndex = getColumnIndex(headers, "Praça")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
 
-    if (pracaIndex === -1) return []
+    if (modalidadeIndex === -1) return []
 
     const valores = new Set<string>()
 
     rows.forEach((row: any[]) => {
-      const valor = row[pracaIndex]?.toString().trim() || ""
+      const valor = row[modalidadeIndex]?.toString().trim() || ""
       if (valor) {
         valores.add(valor)
       }
@@ -185,22 +185,22 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [ga4ReceptivosData])
 
-  // Função para obter valores únicos da coluna Praça da aba Eventos Receptivos
-  const valoresPracaEventos = useMemo(() => {
+  // Função para obter valores únicos da coluna Modalidade da aba Eventos Receptivos
+  const valoresModalidadeEventos = useMemo(() => {
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
       return []
     }
 
     const headers = eventosReceptivosData.data.values[0]
     const rows = eventosReceptivosData.data.values.slice(1)
-    const pracaIndex = getColumnIndex(headers, "Praça")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
 
-    if (pracaIndex === -1) return []
+    if (modalidadeIndex === -1) return []
 
     const valores = new Set<string>()
 
     rows.forEach((row: any[]) => {
-      const valor = row[pracaIndex]?.toString().trim() || ""
+      const valor = row[modalidadeIndex]?.toString().trim() || ""
       if (valor) {
         valores.add(valor)
       }
@@ -209,11 +209,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [eventosReceptivosData])
 
-  // Valores únicos combinados de Praça
-  const valoresPraca = useMemo(() => {
-    const combined = new Set([...valoresPracaGA4, ...valoresPracaEventos])
+  // Valores únicos combinados de Modalidade
+  const valoresModalidade = useMemo(() => {
+    const combined = new Set([...valoresModalidadeGA4, ...valoresModalidadeEventos])
     return Array.from(combined).sort()
-  }, [valoresPracaGA4, valoresPracaEventos])
+  }, [valoresModalidadeGA4, valoresModalidadeEventos])
 
   // Função para verificar se a linha passa pelo filtro da coluna Q
   const passaFiltroColunaQ = (row: any[], headers: string[]): boolean => {
@@ -227,16 +227,16 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return selectedColunaQ.includes(valorColunaQ)
   }
 
-  // Função para verificar se a linha passa pelo filtro de Praça
-  const passaFiltroPraca = (row: any[], headers: string[]): boolean => {
-    if (selectedPraca.length === 0) return true
+  // Função para verificar se a linha passa pelo filtro de Modalidade
+  const passaFiltroModalidade = (row: any[], headers: string[]): boolean => {
+    if (selectedModalidade.length === 0) return true
     
-    const pracaIndex = getColumnIndex(headers, "Praça")
-    if (pracaIndex === -1) return true
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    if (modalidadeIndex === -1) return true
     
-    const valorPraca = row[pracaIndex]?.toString().trim() || ""
+    const valorModalidade = row[modalidadeIndex]?.toString().trim() || ""
     
-    return selectedPraca.includes(valorPraca)
+    return selectedModalidade.includes(valorModalidade)
   }
 
   // Função para alternar seleção do filtro da coluna Q
@@ -249,9 +249,9 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     })
   }
 
-  // Função para alternar seleção do filtro de Praça
-  const togglePraca = (valor: string) => {
-    setSelectedPraca((prev) => {
+  // Função para alternar seleção do filtro de Modalidade
+  const toggleModalidade = (valor: string) => {
+    setSelectedModalidade((prev) => {
       if (prev.includes(valor)) {
         return prev.filter((v) => v !== valor)
       }
@@ -328,8 +328,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro de Praça
-      if (!passaFiltroPraca(row, headers)) {
+      // Aplicar filtro de Modalidade
+      if (!passaFiltroModalidade(row, headers)) {
         return
       }
 
@@ -365,7 +365,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       totalSessions,
       resumoPorData: dataResumo,
     }
-  }, [ga4ReceptivosData, dateRange, selectedColunaQ, selectedPraca])
+  }, [ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
   const processedEventosData = useMemo(() => {
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
@@ -403,8 +403,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro de Praça
-      if (!passaFiltroPraca(row, headers)) {
+      // Aplicar filtro de Modalidade
+      if (!passaFiltroModalidade(row, headers)) {
         return
       }
 
@@ -454,7 +454,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       firstVisit: firstVisitTotal,
       totalCTAs: bbTrackTotal + firstVisitTotal,
     }
-  }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedPraca])
+  }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
   const processedResumoData = useMemo(() => {
     
@@ -542,8 +542,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro de Praça
-      if (!passaFiltroPraca(row, headers)) {
+      // Aplicar filtro de Modalidade
+      if (!passaFiltroModalidade(row, headers)) {
         return
       }
 
@@ -610,7 +610,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     }
 
     return resultado
-  }, [ga4ReceptivosData, dateRange, selectedColunaQ, selectedPraca])
+  }, [ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
 
   // Função para formatar números (trunca para baixo, sem arredondar para cima)
@@ -782,24 +782,24 @@ if (receptivosError || eventosError) {
             </div>
           </div>
 
-          {/* Filtro de Praça */}
+          {/* Filtro de Modalidade */}
           <div className="col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças
+              Modalidades
             </label>
             <div className="flex flex-wrap gap-2">
-              {valoresPraca.map((praca) => (
+              {valoresModalidade.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPraca.includes(praca)
+                    selectedModalidade.includes(modalidade)
                       ? "bg-green-100 text-green-800 border border-green-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>

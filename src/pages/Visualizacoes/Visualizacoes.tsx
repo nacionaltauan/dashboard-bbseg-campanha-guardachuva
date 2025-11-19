@@ -27,7 +27,7 @@ interface ProcessedData {
   cpvc: number
   vtr100: number
   tipoCompra: string
-  praca: string
+  modalidade: string
   tipoFormato: string // Adicionado para filtrar melhor os tipos
 }
 
@@ -53,7 +53,7 @@ interface PlatformMetrics {
   vtrPercentage: number
   visualizacoesPercentage: number
   tiposCompra: string[]
-  pracas: string[]
+  modalidades: string[]
   tipoFormato: string
 }
 
@@ -64,10 +64,10 @@ const Visualizacoes: React.FC = () => {
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [selectedTiposCompra, setSelectedTiposCompra] = useState<string[]>([])
-  const [selectedPracas, setSelectedPracas] = useState<string[]>([])
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
   const [availablePlatforms, setAvailablePlatforms] = useState<string[]>([])
   const [availableTiposCompra, setAvailableTiposCompra] = useState<string[]>([])
-  const [availablePracas, setAvailablePracas] = useState<string[]>([])
+  const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
 
   // Cores para as plataformas (seguindo o modelo da imagem)
   const platformColors: Record<string, string> = {
@@ -200,13 +200,17 @@ const Visualizacoes: React.FC = () => {
             // Extrair tipo de compra da API
             const tipoCompra = item["Tipo de Compra"] || "CPM"
 
-            // Para praça, vamos extrair do nome da campanha se não houver coluna específica
-            let praca = "Nacional" // Default
-            if (campaignName.includes("| SP |")) praca = "São Paulo"
-            else if (campaignName.includes("| RJ |")) praca = "Rio de Janeiro"
-            else if (campaignName.includes("| MG |")) praca = "Minas Gerais"
-            else if (campaignName.includes("| RS |")) praca = "Rio Grande do Sul"
-            else if (campaignName.includes("| NAC |")) praca = "Nacional"
+            // Para modalidade, vamos extrair do nome da campanha se não houver coluna específica
+            let modalidade = "Nacional" // Default
+            // Verificar se há coluna Modalidade na planilha
+            const modalidadeIndex = headers.findIndex((h: string) => h && h.toLowerCase().includes("modalidade"))
+            if (modalidadeIndex !== -1 && row[modalidadeIndex]) {
+              modalidade = row[modalidadeIndex].toString().trim() || "Nacional"
+            } else if (campaignName.includes("| SP |")) modalidade = "São Paulo"
+            else if (campaignName.includes("| RJ |")) modalidade = "Rio de Janeiro"
+            else if (campaignName.includes("| MG |")) modalidade = "Minas Gerais"
+            else if (campaignName.includes("| RS |")) modalidade = "Rio Grande do Sul"
+            else if (campaignName.includes("| NAC |")) modalidade = "Nacional"
 
             return {
               date: convertedDate,
@@ -228,7 +232,7 @@ const Visualizacoes: React.FC = () => {
               cpvc: videoCompletions > 0 ? cost / videoCompletions : 0,
               vtr100: impressions > 0 && videoCompletions > 0 ? (videoCompletions / impressions) * 100 : 0,
               tipoCompra: tipoCompra,
-              praca: praca,
+              modalidade: modalidade,
               tipoFormato: item["video_estatico_audio"] === "Video" ? "Vídeo" : 
                           item["video_estatico_audio"] === "Audio" ? "Audio" : "Estático",
             } as ProcessedData
@@ -292,16 +296,16 @@ const Visualizacoes: React.FC = () => {
         setAvailableTiposCompra(tiposCompra)
         setSelectedTiposCompra([])
 
-        // Extrair praças únicas
-        const pracaSet = new Set<string>()
+        // Extrair modalidades únicas
+        const modalidadeSet = new Set<string>()
         processed.forEach((item) => {
-          if (item.praca) {
-            pracaSet.add(item.praca)
+          if (item.modalidade) {
+            modalidadeSet.add(item.modalidade)
           }
         })
-        const pracas = Array.from(pracaSet).filter(Boolean).sort()
-        setAvailablePracas(pracas)
-        setSelectedPracas([])
+        const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
+        setAvailableModalidades(modalidades)
+        setSelectedModalidades([])
       } catch (error) {
         console.error("Erro ao processar dados:", error)
       }
@@ -312,7 +316,7 @@ const Visualizacoes: React.FC = () => {
 
 
 
-  // Filtrar dados por data, plataforma, tipo de compra e praça
+  // Filtrar dados por data, plataforma, tipo de compra e modalidade
   const filteredData = useMemo(() => {
     let filtered = processedData
 
@@ -341,13 +345,13 @@ const Visualizacoes: React.FC = () => {
       filtered = filtered.filter((item) => selectedTiposCompra.includes(item.tipoCompra))
     }
 
-    // Filtro por praça
-    if (selectedPracas.length > 0) {
-      filtered = filtered.filter((item) => selectedPracas.includes(item.praca))
+    // Filtro por modalidade
+    if (selectedModalidades.length > 0) {
+      filtered = filtered.filter((item) => selectedModalidades.includes(item.modalidade))
     }
 
     return filtered
-  }, [processedData, dateRange, selectedPlatforms, selectedTiposCompra, selectedPracas])
+  }, [processedData, dateRange, selectedPlatforms, selectedTiposCompra, selectedModalidades])
 
   // Calcular métricas por plataforma
   const platformMetrics = useMemo(() => {
@@ -377,7 +381,7 @@ const Visualizacoes: React.FC = () => {
           vtrPercentage: 0,
           visualizacoesPercentage: 0,
           tiposCompra: [],
-          pracas: [],
+          modalidades: [],
           tipoFormato: item.tipoFormato,
         }
       }
@@ -407,9 +411,9 @@ const Visualizacoes: React.FC = () => {
       if (!metrics[item.platform].tiposCompra.includes(item.tipoCompra)) {
         metrics[item.platform].tiposCompra.push(item.tipoCompra)
       }
-      // Adicionar praça se não existir
-      if (!metrics[item.platform].pracas.includes(item.praca)) {
-        metrics[item.platform].pracas.push(item.praca)
+      // Adicionar modalidade se não existir
+      if (!metrics[item.platform].modalidades.includes(item.modalidade)) {
+        metrics[item.platform].modalidades.push(item.modalidade)
       }
     })
 
@@ -432,7 +436,7 @@ const Visualizacoes: React.FC = () => {
         metric.vtrPercentage = maxVtr > 0 ? (metric.vtr100 / maxVtr) * 100 : 0
         // Ordenar tipos de compra
         metric.tiposCompra = sortTiposCompra(metric.tiposCompra)
-        metric.pracas.sort()
+        metric.modalidades.sort()
       }
     })
 
@@ -503,13 +507,13 @@ const Visualizacoes: React.FC = () => {
     })
   }
 
-  // Função para alternar seleção de praça
-  const togglePraca = (praca: string) => {
-    setSelectedPracas((prev) => {
-      if (prev.includes(praca)) {
-        return prev.filter((p) => p !== praca)
+  // Função para alternar seleção de modalidade
+  const toggleModalidade = (modalidade: string) => {
+    setSelectedModalidades((prev) => {
+      if (prev.includes(modalidade)) {
+        return prev.filter((m) => m !== modalidade)
       }
-      return [...prev, praca]
+      return [...prev, modalidade]
     })
   }
 
@@ -842,24 +846,24 @@ const Visualizacoes: React.FC = () => {
             </div>
           </div>
 
-          {/* Filtro de Praça */}
+          {/* Filtro de Modalidade */}
           <div className="flex items-center gap-2">
             <label className="block text-sm font-medium text-gray-700 flex items-center">
               <MapPin className="w-4 h-4 mr-2" />
-              Praças:
+              Modalidades:
             </label>
             <div className="flex flex-wrap gap-2">
-              {availablePracas.map((praca) => (
+              {availableModalidades.map((modalidade) => (
                 <button
-                  key={praca}
-                  onClick={() => togglePraca(praca)}
+                  key={modalidade}
+                  onClick={() => toggleModalidade(modalidade)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
-                    selectedPracas.includes(praca)
+                    selectedModalidades.includes(modalidade)
                       ? "bg-blue-100 text-blue-800 border border-blue-300"
                       : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  {praca}
+                  {modalidade}
                 </button>
               ))}
             </div>
