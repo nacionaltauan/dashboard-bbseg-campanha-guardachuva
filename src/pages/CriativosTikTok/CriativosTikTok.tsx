@@ -92,10 +92,19 @@ const CriativosTikTok: React.FC = () => {
 
   useEffect(() => {
     const values = apiData?.data?.values
-    if (!values || values.length <= 1) return
+    if (!values || values.length <= 1) {
+      console.log("TikTok: Dados não disponíveis ou estrutura incorreta:", apiData)
+      return
+    }
 
     const headers = values[0]
     const rows = values.slice(1)
+    
+    console.log("TikTok: Headers encontrados:", headers)
+    console.log("TikTok: Total de linhas:", rows.length)
+    if (rows.length > 0) {
+      console.log("TikTok: Primeira linha de dados:", rows[0])
+    }
 
     const parseNumber = (v: string) => {
       if (!v?.trim()) return 0
@@ -118,32 +127,46 @@ const CriativosTikTok: React.FC = () => {
         const idx = headers.indexOf(field)
         return idx >= 0 ? (row[idx] ?? "") : ""
       }
+      
+      // Obter valores básicos da planilha (aba: Tiktok_tratado)
+      const impressions = parseInteger(get("Impressions"))
+      const clicks = parseInteger(get("Clicks")) // Existe na planilha
+      const cost = parseNumber(get("Total spent"))
+      const reach = parseInteger(get("Reach"))
+      const videoViews = parseInteger(get("Video views ") || get("Video views")) // Com ou sem espaço
+      const videoCompletions = parseInteger(get("Video completions ") || get("Video completions")) // Com ou sem espaço
+      
+      // Calcular valores derivados (não existem na planilha, precisam ser calculados)
+      const cpc = clicks > 0 ? cost / clicks : 0
+      const cpm = impressions > 0 ? (cost / impressions) * 1000 : 0
+      const frequency = reach > 0 ? impressions / reach : 0
+      
       return {
         date: get("Date"),
         campaignName: get("Campaign name"),
-        adGroupName: get("Ad group name"),
-        adName: get("Ad name"),
-        adText: get("Ad text"),
-        videoThumbnailUrl: get("Video thumbnail URL"),
-        impressions: parseInteger(get("Impressions")),
-        clicks: parseInteger(get("Clicks")),
-        cost: parseNumber(get("Cost")),
-        cpc: parseNumber(get("CPC")),
-        cpm: parseNumber(get("CPM")),
-        reach: parseInteger(get("Reach")),
-        frequency: parseNumber(get("Frequency")),
-        results: parseInteger(get("Results")),
-        videoViews: parseInteger(get("Video views")),
-        twoSecondVideoViews: parseInteger(get("2-second video views")),
+        adGroupName: get("Ad group name") || "", // Pode não existir
+        adName: get("Creative title") || get("Ad name"), // Usar Creative title se Ad name não existir
+        adText: get("Ad text") || "", // Pode não existir
+        videoThumbnailUrl: get("Video thumbnail URL") || "", // Pode não existir
+        impressions: impressions,
+        clicks: clicks,
+        cost: cost,
+        cpc: cpc,
+        cpm: cpm,
+        reach: reach,
+        frequency: frequency,
+        results: parseInteger(get("Results") || get("Total engagements")), // Usar Total engagements se Results não existir
+        videoViews: videoViews,
+        twoSecondVideoViews: parseInteger(get("2-second video views") || get("Video starts")), // Usar Video starts se não existir
         videoViews25: parseInteger(get("Video views at 25%")),
         videoViews50: parseInteger(get("Video views at 50%")),
         videoViews75: parseInteger(get("Video views at 75%")),
-        videoViews100: parseInteger(get("Video views at 100%")),
-        profileVisits: parseInteger(get("Profile visits")),
-        paidLikes: parseInteger(get("Paid likes")),
-        paidComments: parseInteger(get("Paid comments")),
-        paidShares: parseInteger(get("Paid shares")),
-        paidFollows: parseInteger(get("Paid follows")),
+        videoViews100: parseInteger(get("Video views at 100%") || get("Video completions ") || get("Video completions")), // Usar Video completions se não existir
+        profileVisits: parseInteger(get("Profile visits")), // Pode não existir
+        paidLikes: parseInteger(get("Paid likes")), // Pode não existir
+        paidComments: parseInteger(get("Paid comments")), // Pode não existir
+        paidShares: parseInteger(get("Paid shares")), // Pode não existir
+        paidFollows: parseInteger(get("Paid follows")), // Pode não existir
       }
     })
 
