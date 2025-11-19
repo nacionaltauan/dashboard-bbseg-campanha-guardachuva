@@ -915,6 +915,32 @@ export const fetchConsolidadoNacionalData = async () => {
   }
 }
 
+// Função para buscar dados de Alcance TikTok
+export const fetchAlcanceTikTokData = async () => {
+  try {
+    const response = await apiNacional.get(
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Alcance_Tiktok",
+    )
+    return response.data
+  } catch (error) {
+    console.error("Erro ao buscar dados de Alcance TikTok:", error)
+    throw error
+  }
+}
+
+// Função para buscar dados de Alcance Meta
+export const fetchAlcanceMetaData = async () => {
+  try {
+    const response = await apiNacional.get(
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Alcance_Meta",
+    )
+    return response.data
+  } catch (error) {
+    console.error("Erro ao buscar dados de Alcance Meta:", error)
+    throw error
+  }
+}
+
 export const fetchTikTokNacionalData = async () => {
   try {
     const response = await apiNacional.get(
@@ -949,6 +975,58 @@ export const useConsolidadoNacionalData = () => {
     try {
       setLoading(true)
       const result = await fetchConsolidadoNacionalData()
+      setData(result)
+      setError(null)
+    } catch (err) {
+      setError(err as Error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  return { data, loading, error, refetch: loadData }
+}
+
+// Hook para buscar dados de Alcance TikTok
+export const useAlcanceTikTokData = () => {
+  const [data, setData] = React.useState<any>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<Error | null>(null)
+
+  const loadData = React.useCallback(async () => {
+    try {
+      setLoading(true)
+      const result = await fetchAlcanceTikTokData()
+      setData(result)
+      setError(null)
+    } catch (err) {
+      setError(err as Error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  return { data, loading, error, refetch: loadData }
+}
+
+// Hook para buscar dados de Alcance Meta
+export const useAlcanceMetaData = () => {
+  const [data, setData] = React.useState<any>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<Error | null>(null)
+
+  const loadData = React.useCallback(async () => {
+    try {
+      setLoading(true)
+      const result = await fetchAlcanceMetaData()
       setData(result)
       setError(null)
     } catch (err) {

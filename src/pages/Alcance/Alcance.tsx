@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Users, Calendar, Filter, Info, MapPin } from "lucide-react"
-import { useConsolidadoNacionalData } from "../../services/api"
+import { useConsolidadoNacionalData, useAlcanceTikTokData, useAlcanceMetaData } from "../../services/api"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import Loading from "../../components/Loading/Loading"
 
@@ -43,6 +43,8 @@ interface PlatformMetrics {
 const Alcance: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
+  const { data: alcanceTikTokData } = useAlcanceTikTokData()
+  const { data: alcanceMetaData } = useAlcanceMetaData()
   const [processedData, setProcessedData] = useState<ProcessedData[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
@@ -243,6 +245,79 @@ const Alcance: React.FC = () => {
     return filtered
   }, [processedData, dateRange, selectedPlatforms, selectedPracas])
 
+  // Calcular alcance e frequência totais de TikTok e Meta das abas específicas
+  const alcanceTotals = useMemo(() => {
+    let tiktokReach = 0
+    let tiktokFrequency = 0
+    let tiktokImpressions = 0
+    let metaReach = 0
+    let metaFrequency = 0
+    let metaImpressions = 0
+
+    // Calcular totais de TikTok da aba Alcance_Tiktok
+    if (alcanceTikTokData?.data?.values && alcanceTikTokData.data.values.length > 1) {
+      const [headers, ...rows] = alcanceTikTokData.data.values
+      const reachIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("reach") || h.toLowerCase().includes("alcance"))
+      )
+      const frequencyIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("frequency") || h.toLowerCase().includes("frequência") || h.toLowerCase().includes("frequencia"))
+      )
+      const impressionsIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("impressions") || h.toLowerCase().includes("impressões") || h.toLowerCase().includes("impressoes"))
+      )
+
+      rows.forEach((row: any[]) => {
+        if (reachIndex !== -1) {
+          const reach = Number.parseInt(row[reachIndex]?.toString().replace(/\./g, "") || "0") || 0
+          tiktokReach += reach
+        }
+        if (frequencyIndex !== -1) {
+          const freq = Number.parseFloat(row[frequencyIndex]?.toString().replace(",", ".") || "0") || 0
+          tiktokFrequency += freq
+        }
+        if (impressionsIndex !== -1) {
+          const imp = Number.parseInt(row[impressionsIndex]?.toString().replace(/\./g, "") || "0") || 0
+          tiktokImpressions += imp
+        }
+      })
+    }
+
+    // Calcular totais de Meta da aba Alcance_Meta
+    if (alcanceMetaData?.data?.values && alcanceMetaData.data.values.length > 1) {
+      const [headers, ...rows] = alcanceMetaData.data.values
+      const reachIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("reach") || h.toLowerCase().includes("alcance"))
+      )
+      const frequencyIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("frequency") || h.toLowerCase().includes("frequência") || h.toLowerCase().includes("frequencia"))
+      )
+      const impressionsIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("impressions") || h.toLowerCase().includes("impressões") || h.toLowerCase().includes("impressoes"))
+      )
+
+      rows.forEach((row: any[]) => {
+        if (reachIndex !== -1) {
+          const reach = Number.parseInt(row[reachIndex]?.toString().replace(/\./g, "") || "0") || 0
+          metaReach += reach
+        }
+        if (frequencyIndex !== -1) {
+          const freq = Number.parseFloat(row[frequencyIndex]?.toString().replace(",", ".") || "0") || 0
+          metaFrequency += freq
+        }
+        if (impressionsIndex !== -1) {
+          const imp = Number.parseInt(row[impressionsIndex]?.toString().replace(/\./g, "") || "0") || 0
+          metaImpressions += imp
+        }
+      })
+    }
+
+    return {
+      tiktok: { reach: tiktokReach, frequency: tiktokFrequency, impressions: tiktokImpressions },
+      meta: { reach: metaReach, frequency: metaFrequency, impressions: metaImpressions },
+    }
+  }, [alcanceTikTokData, alcanceMetaData])
+
   // Calcular métricas por plataforma
   const platformMetrics = useMemo(() => {
     const metrics: Record<string, PlatformMetrics> = {}
@@ -268,11 +343,20 @@ const Alcance: React.FC = () => {
 
       metrics[item.platform].impressions += item.impressions
       metrics[item.platform].cost += item.cost
+      // Para alcance: usar consolidado para todos (será substituído depois para TikTok e Meta)
       metrics[item.platform].reach += item.reach
       metrics[item.platform].clicks += item.clicks
       metrics[item.platform].linkClicks += item.linkClicks
       metrics[item.platform].visualizacoes100 += item.visualizacoes100
     })
+
+    // Substituir alcance de TikTok e Meta pelos valores das abas específicas
+    if (metrics["TikTok"]) {
+      metrics["TikTok"].reach = alcanceTotals.tiktok.reach
+    }
+    if (metrics["Meta"]) {
+      metrics["Meta"].reach = alcanceTotals.meta.reach
+    }
 
     // Calcular médias e percentuais
     const totalReach = Object.values(metrics).reduce((sum, metric) => sum + metric.reach, 0)
@@ -281,7 +365,20 @@ const Alcance: React.FC = () => {
       const platformData = filteredData.filter((item) => item.platform === metric.platform)
       if (platformData.length > 0) {
         metric.cpm = metric.impressions > 0 ? metric.cost / (metric.impressions / 1000) : 0
-        metric.frequency = metric.reach > 0 ? metric.impressions / metric.reach : 0
+        
+        // Para frequência: usar dados específicos para TikTok e Meta
+        if (metric.platform === "TikTok") {
+          metric.frequency = alcanceTotals.tiktok.frequency > 0 
+            ? alcanceTotals.tiktok.frequency 
+            : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+        } else if (metric.platform === "Meta") {
+          metric.frequency = alcanceTotals.meta.frequency > 0 
+            ? alcanceTotals.meta.frequency 
+            : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+        } else {
+          metric.frequency = metric.reach > 0 ? metric.impressions / metric.reach : 0
+        }
+        
         metric.cpv = metric.visualizacoes100 > 0 ? metric.cost / metric.visualizacoes100 : 0
         metric.vtr100 = metric.impressions > 0 ? (metric.visualizacoes100 / metric.impressions) * 100 : 0
         metric.percentage = totalReach > 0 ? (metric.reach / totalReach) * 100 : 0
@@ -289,15 +386,40 @@ const Alcance: React.FC = () => {
     })
 
     return Object.values(metrics).sort((a, b) => b.reach - a.reach)
-  }, [filteredData, platformColors])
+  }, [filteredData, platformColors, alcanceTotals])
 
   // Calcular totais
   const totals = useMemo(() => {
     const totalInvestment = filteredData.reduce((sum, item) => sum + item.cost, 0)
     const totalImpressions = filteredData.reduce((sum, item) => sum + item.impressions, 0)
-    const totalReach = filteredData.reduce((sum, item) => sum + item.reach, 0)
+    
+    // Para alcance: usar dados específicos de TikTok e Meta, e consolidado para outros
+    const otherReach = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.reach, 0)
+    const totalReach = alcanceTotals.tiktok.reach + alcanceTotals.meta.reach + otherReach
+    
     const totalVisualizacoes100 = filteredData.reduce((sum, item) => sum + item.visualizacoes100, 0)
-    const avgFrequency = totalImpressions > 0 && totalReach > 0 ? totalImpressions / totalReach : 0
+    
+    // Para frequência: usar dados específicos quando disponíveis
+    const tiktokFreq = alcanceTotals.tiktok.frequency > 0 
+      ? alcanceTotals.tiktok.frequency 
+      : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+    const metaFreq = alcanceTotals.meta.frequency > 0 
+      ? alcanceTotals.meta.frequency 
+      : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+    
+    const otherImpressions = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.impressions, 0)
+    const otherReachForFreq = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.reach, 0)
+    const otherFreq = otherReachForFreq > 0 ? otherImpressions / otherReachForFreq : 0
+    
+    // Frequência média ponderada
+    const totalImpressionsForFreq = alcanceTotals.tiktok.impressions + alcanceTotals.meta.impressions + otherImpressions
+    const avgFrequency = totalImpressionsForFreq > 0 && totalReach > 0 ? totalImpressionsForFreq / totalReach : 0
 
     return {
       investment: totalInvestment,
@@ -308,7 +430,7 @@ const Alcance: React.FC = () => {
       avgCpm: totalImpressions > 0 ? totalInvestment / (totalImpressions / 1000) : 0,
       avgCpv: totalVisualizacoes100 > 0 ? totalInvestment / totalVisualizacoes100 : 0,
     }
-  }, [filteredData])
+  }, [filteredData, alcanceTotals])
 
   // Função para formatar números
   const formatNumber = (value: number): string => {

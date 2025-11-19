@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { BarChart3, Calendar, Filter, MapPin } from "lucide-react"
-import { useConsolidadoNacionalData } from "../../services/api"
+import { useConsolidadoNacionalData, useAlcanceTikTokData, useAlcanceMetaData } from "../../services/api"
 import { useBenchmarkNacionalData, processBenchmarkData } from "../../services/benchmarkApi"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import Loading from "../../components/Loading/Loading"
@@ -56,6 +56,8 @@ const VisaoGeral: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
   const { data: benchmarkData } = useBenchmarkNacionalData()
+  const { data: alcanceTikTokData } = useAlcanceTikTokData()
+  const { data: alcanceMetaData } = useAlcanceMetaData()
   const [processedData, setProcessedData] = useState<ProcessedData[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
@@ -331,13 +333,112 @@ const VisaoGeral: React.FC = () => {
     return Object.values(metrics).sort((a, b) => b.impressions - a.impressions)
   }, [filteredData])
 
+  // Calcular alcance e frequência totais de TikTok e Meta das abas específicas
+  const alcanceTotals = useMemo(() => {
+    let tiktokReach = 0
+    let tiktokFrequency = 0
+    let tiktokImpressions = 0
+    let metaReach = 0
+    let metaFrequency = 0
+    let metaImpressions = 0
+
+    // Calcular totais de TikTok da aba Alcance_Tiktok
+    if (alcanceTikTokData?.data?.values && alcanceTikTokData.data.values.length > 1) {
+      const [headers, ...rows] = alcanceTikTokData.data.values
+      const reachIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("reach") || h.toLowerCase().includes("alcance"))
+      )
+      const frequencyIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("frequency") || h.toLowerCase().includes("frequência") || h.toLowerCase().includes("frequencia"))
+      )
+      const impressionsIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("impressions") || h.toLowerCase().includes("impressões") || h.toLowerCase().includes("impressoes"))
+      )
+
+      rows.forEach((row: any[]) => {
+        if (reachIndex !== -1) {
+          const reach = Number.parseInt(row[reachIndex]?.toString().replace(/\./g, "") || "0") || 0
+          tiktokReach += reach
+        }
+        if (frequencyIndex !== -1) {
+          const freq = Number.parseFloat(row[frequencyIndex]?.toString().replace(",", ".") || "0") || 0
+          tiktokFrequency += freq
+        }
+        if (impressionsIndex !== -1) {
+          const imp = Number.parseInt(row[impressionsIndex]?.toString().replace(/\./g, "") || "0") || 0
+          tiktokImpressions += imp
+        }
+      })
+    }
+
+    // Calcular totais de Meta da aba Alcance_Meta
+    if (alcanceMetaData?.data?.values && alcanceMetaData.data.values.length > 1) {
+      const [headers, ...rows] = alcanceMetaData.data.values
+      const reachIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("reach") || h.toLowerCase().includes("alcance"))
+      )
+      const frequencyIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("frequency") || h.toLowerCase().includes("frequência") || h.toLowerCase().includes("frequencia"))
+      )
+      const impressionsIndex = headers.findIndex((h: string) => 
+        h && (h.toLowerCase().includes("impressions") || h.toLowerCase().includes("impressões") || h.toLowerCase().includes("impressoes"))
+      )
+
+      rows.forEach((row: any[]) => {
+        if (reachIndex !== -1) {
+          const reach = Number.parseInt(row[reachIndex]?.toString().replace(/\./g, "") || "0") || 0
+          metaReach += reach
+        }
+        if (frequencyIndex !== -1) {
+          const freq = Number.parseFloat(row[frequencyIndex]?.toString().replace(",", ".") || "0") || 0
+          metaFrequency += freq
+        }
+        if (impressionsIndex !== -1) {
+          const imp = Number.parseInt(row[impressionsIndex]?.toString().replace(/\./g, "") || "0") || 0
+          metaImpressions += imp
+        }
+      })
+    }
+
+    return {
+      tiktok: { reach: tiktokReach, frequency: tiktokFrequency, impressions: tiktokImpressions },
+      meta: { reach: metaReach, frequency: metaFrequency, impressions: metaImpressions },
+    }
+  }, [alcanceTikTokData, alcanceMetaData])
+
   // Calcular totais
   const totals = useMemo(() => {
     const investment = filteredData.reduce((sum, item) => sum + item.cost, 0)
     const impressions = filteredData.reduce((sum, item) => sum + item.impressions, 0)
-    const reach = filteredData.reduce((sum, item) => sum + item.reach, 0)
+    
+    // Para alcance: usar dados específicos de TikTok e Meta, e consolidado para outros
+    const otherReach = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.reach, 0)
+    const reach = alcanceTotals.tiktok.reach + alcanceTotals.meta.reach + otherReach
+    
     const clicks = filteredData.reduce((sum, item) => sum + item.clicks, 0)
-    const frequency = reach > 0 ? impressions / reach : 0
+    
+    // Para frequência: usar dados específicos quando disponíveis
+    const tiktokFreq = alcanceTotals.tiktok.frequency > 0 
+      ? alcanceTotals.tiktok.frequency 
+      : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+    const metaFreq = alcanceTotals.meta.frequency > 0 
+      ? alcanceTotals.meta.frequency 
+      : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+    
+    const otherImpressions = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.impressions, 0)
+    const otherReachForFreq = filteredData
+      .filter((item) => item.platform !== "TikTok" && item.platform !== "Meta")
+      .reduce((sum, item) => sum + item.reach, 0)
+    const otherFreq = otherReachForFreq > 0 ? otherImpressions / otherReachForFreq : 0
+    
+    // Frequência média ponderada
+    const totalImpressionsForFreq = alcanceTotals.tiktok.impressions + alcanceTotals.meta.impressions + otherImpressions
+    const frequency = totalImpressionsForFreq > 0 && reach > 0 ? totalImpressionsForFreq / reach : 0
+    
     const cpm = impressions > 0 ? investment / (impressions / 1000) : 0
     const cpc = clicks > 0 ? investment / clicks : 0
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
@@ -358,7 +459,7 @@ const VisaoGeral: React.FC = () => {
       cpv,
       vtr,
     }
-  }, [filteredData])
+  }, [filteredData, alcanceTotals])
 
   // Preparar dados para gráficos
   const impressionsChartData: ChartDataPoint[] = platformMetrics.map((metric) => ({
@@ -367,17 +468,61 @@ const VisaoGeral: React.FC = () => {
     color: metric.color,
   }))
 
-  const reachChartData: ChartDataPoint[] = platformMetrics.map((metric) => ({
-    platform: metric.platform,
-    value: metric.reach,
-    color: metric.color,
-  }))
+  // Dados de alcance: usar abas específicas para TikTok e Meta
+  const reachChartData: ChartDataPoint[] = useMemo(() => {
+    return platformMetrics.map((metric) => {
+      if (metric.platform === "TikTok") {
+        return {
+          platform: metric.platform,
+          value: alcanceTotals.tiktok.reach,
+          color: metric.color,
+        }
+      } else if (metric.platform === "Meta") {
+        return {
+          platform: metric.platform,
+          value: alcanceTotals.meta.reach,
+          color: metric.color,
+        }
+      } else {
+        return {
+          platform: metric.platform,
+          value: metric.reach,
+          color: metric.color,
+        }
+      }
+    })
+  }, [platformMetrics, alcanceTotals])
 
-  const frequencyChartData: ChartDataPoint[] = platformMetrics.map((metric) => ({
-    platform: metric.platform,
-    value: metric.frequency,
-    color: metric.color,
-  }))
+  // Dados de frequência: usar abas específicas para TikTok e Meta
+  const frequencyChartData: ChartDataPoint[] = useMemo(() => {
+    return platformMetrics.map((metric) => {
+      if (metric.platform === "TikTok") {
+        const freq = alcanceTotals.tiktok.frequency > 0 
+          ? alcanceTotals.tiktok.frequency 
+          : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+        return {
+          platform: metric.platform,
+          value: freq,
+          color: metric.color,
+        }
+      } else if (metric.platform === "Meta") {
+        const freq = alcanceTotals.meta.frequency > 0 
+          ? alcanceTotals.meta.frequency 
+          : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+        return {
+          platform: metric.platform,
+          value: freq,
+          color: metric.color,
+        }
+      } else {
+        return {
+          platform: metric.platform,
+          value: metric.frequency,
+          color: metric.color,
+        }
+      }
+    })
+  }, [platformMetrics, alcanceTotals])
 
   const cpmChartData: ChartDataPoint[] = platformMetrics.map((metric) => ({
     platform: metric.platform,
@@ -671,14 +816,116 @@ const VisaoGeral: React.FC = () => {
           <HorizontalBarChart data={impressionsChartData} title="Impressões" />
         </div>
 
-        {/* Alcance por Plataforma */}
+        {/* Alcance por Plataforma - Meta e TikTok */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
-          <HorizontalBarChart data={reachChartData} title="Alcance" />
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Alcance</h4>
+          <div className="space-y-3">
+            {/* TikTok */}
+            {reachChartData.find((d) => d.platform === "TikTok") && (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 text-xs text-gray-600 font-medium">TikTok</div>
+                <div className="flex-1 relative">
+                  <div
+                    className="h-6 rounded"
+                    style={{
+                      width: `${Math.min((alcanceTotals.tiktok.reach / Math.max(alcanceTotals.tiktok.reach, alcanceTotals.meta.reach, 1)) * 100, 100)}%`,
+                      backgroundColor: "#ff0050",
+                    }}
+                  />
+                  <div className="absolute right-2 top-0 h-6 flex items-center">
+                    <span className="text-xs font-medium text-gray-700">{formatNumber(alcanceTotals.tiktok.reach)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Meta */}
+            {reachChartData.find((d) => d.platform === "Meta") && (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 text-xs text-gray-600 font-medium">Meta</div>
+                <div className="flex-1 relative">
+                  <div
+                    className="h-6 rounded"
+                    style={{
+                      width: `${Math.min((alcanceTotals.meta.reach / Math.max(alcanceTotals.tiktok.reach, alcanceTotals.meta.reach, 1)) * 100, 100)}%`,
+                      backgroundColor: "#0668E1",
+                    }}
+                  />
+                  <div className="absolute right-2 top-0 h-6 flex items-center">
+                    <span className="text-xs font-medium text-gray-700">{formatNumber(alcanceTotals.meta.reach)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Frequência por Plataforma */}
+        {/* Frequência por Plataforma - Meta e TikTok */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
-          <HorizontalBarChart data={frequencyChartData} title="Frequência" format={(value) => value.toFixed(2)} />
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Frequência</h4>
+          <div className="space-y-3">
+            {/* TikTok */}
+            {frequencyChartData.find((d) => d.platform === "TikTok") && (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 text-xs text-gray-600 font-medium">TikTok</div>
+                <div className="flex-1 relative">
+                  {(() => {
+                    const tiktokFreq = alcanceTotals.tiktok.frequency > 0 
+                      ? alcanceTotals.tiktok.frequency 
+                      : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+                    const metaFreq = alcanceTotals.meta.frequency > 0 
+                      ? alcanceTotals.meta.frequency 
+                      : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+                    const maxFreq = Math.max(tiktokFreq, metaFreq, 1)
+                    return (
+                      <>
+                        <div
+                          className="h-6 rounded"
+                          style={{
+                            width: `${Math.min((tiktokFreq / maxFreq) * 100, 100)}%`,
+                            backgroundColor: "#ff0050",
+                          }}
+                        />
+                        <div className="absolute right-2 top-0 h-6 flex items-center">
+                          <span className="text-xs font-medium text-gray-700">{tiktokFreq.toFixed(2)}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
+            {/* Meta */}
+            {frequencyChartData.find((d) => d.platform === "Meta") && (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 text-xs text-gray-600 font-medium">Meta</div>
+                <div className="flex-1 relative">
+                  {(() => {
+                    const tiktokFreq = alcanceTotals.tiktok.frequency > 0 
+                      ? alcanceTotals.tiktok.frequency 
+                      : (alcanceTotals.tiktok.reach > 0 ? alcanceTotals.tiktok.impressions / alcanceTotals.tiktok.reach : 0)
+                    const metaFreq = alcanceTotals.meta.frequency > 0 
+                      ? alcanceTotals.meta.frequency 
+                      : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
+                    const maxFreq = Math.max(tiktokFreq, metaFreq, 1)
+                    return (
+                      <>
+                        <div
+                          className="h-6 rounded"
+                          style={{
+                            width: `${Math.min((metaFreq / maxFreq) * 100, 100)}%`,
+                            backgroundColor: "#0668E1",
+                          }}
+                        />
+                        <div className="absolute right-2 top-0 h-6 flex items-center">
+                          <span className="text-xs font-medium text-gray-700">{metaFreq.toFixed(2)}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* CPM por Plataforma */}
