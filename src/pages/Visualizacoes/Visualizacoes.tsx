@@ -200,12 +200,11 @@ const Visualizacoes: React.FC = () => {
             // Extrair tipo de compra da API
             const tipoCompra = item["Tipo de Compra"] || "CPM"
 
-            // Para modalidade, vamos extrair do nome da campanha se não houver coluna específica
+            // Para modalidade, vamos extrair da coluna Modalidade se existir, senão do nome da campanha
             let modalidade = "Nacional" // Default
             // Verificar se há coluna Modalidade na planilha
-            const modalidadeIndex = headers.findIndex((h: string) => h && h.toLowerCase().includes("modalidade"))
-            if (modalidadeIndex !== -1 && row[modalidadeIndex]) {
-              modalidade = row[modalidadeIndex].toString().trim() || "Nacional"
+            if (item["Modalidade"]) {
+              modalidade = item["Modalidade"].toString().trim() || "Nacional"
             } else if (campaignName.includes("| SP |")) modalidade = "São Paulo"
             else if (campaignName.includes("| RJ |")) modalidade = "Rio de Janeiro"
             else if (campaignName.includes("| MG |")) modalidade = "Minas Gerais"
