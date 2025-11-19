@@ -61,13 +61,14 @@ const navigationCards: NavigationCard[] = [
     icon: <Eye className="w-6 h-6" />,
     color: "bg-orange-500",
   },
-  {
-    title: "Tráfego e Engajamento",
-    description: "Análise de tráfego e interações dos usuários",
-    path: "/trafego-engajamento",
-    icon: <TrendingUp className="w-6 h-6" />,
-    color: "bg-red-500",
-  },
+  // Temporariamente desativado
+  // {
+  //   title: "Tráfego e Engajamento",
+  //   description: "Análise de tráfego e interações dos usuários",
+  //   path: "/trafego-engajamento",
+  //   icon: <TrendingUp className="w-6 h-6" />,
+  //   color: "bg-red-500",
+  // },
   {
     title: "Meta - Criativos",
     description: "Performance dos criativos no Facebook e Instagram",

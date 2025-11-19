@@ -151,12 +151,48 @@ const CriativosTikTok: React.FC = () => {
 
     setProcessedData(processed)
 
-    const allDates = processed.map((i) => new Date(i.date)).sort((a, b) => a.getTime() - b.getTime())
+    // Função para validar e converter data
+    const parseAndValidateDate = (dateStr: string): Date | null => {
+      if (!dateStr || !dateStr.trim()) return null
+      
+      // Tentar diferentes formatos de data
+      let date: Date | null = null
+      
+      // Formato DD/MM/YYYY
+      if (dateStr.includes("/")) {
+        const parts = dateStr.split("/")
+        if (parts.length === 3) {
+          const [day, month, year] = parts
+          date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+        }
+      }
+      // Formato YYYY-MM-DD
+      else if (dateStr.includes("-")) {
+        date = new Date(dateStr)
+      }
+      // Tentar parse direto
+      else {
+        date = new Date(dateStr)
+      }
+      
+      // Verificar se a data é válida
+      if (date && !isNaN(date.getTime())) {
+        return date
+      }
+      
+      return null
+    }
 
-    if (allDates.length > 0) {
+    // Filtrar e converter apenas datas válidas
+    const validDates = processed
+      .map((i) => parseAndValidateDate(i.date))
+      .filter((date): date is Date => date !== null)
+      .sort((a, b) => a.getTime() - b.getTime())
+
+    if (validDates.length > 0) {
       setDateRange({
-        start: allDates[0].toISOString().slice(0, 10),
-        end: allDates[allDates.length - 1].toISOString().slice(0, 10),
+        start: validDates[0].toISOString().slice(0, 10),
+        end: validDates[validDates.length - 1].toISOString().slice(0, 10),
       })
     }
 
@@ -243,9 +279,36 @@ const CriativosTikTok: React.FC = () => {
     // Filtro por data (lógica existente)
     if (dateRange.start && dateRange.end) {
       filtered = filtered.filter((item) => {
-        const itemDate = new Date(item.date)
+        // Função auxiliar para validar e converter data
+        const parseDate = (dateStr: string): Date | null => {
+          if (!dateStr || !dateStr.trim()) return null
+          
+          if (dateStr.includes("/")) {
+            const parts = dateStr.split("/")
+            if (parts.length === 3) {
+              const [day, month, year] = parts
+              const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+              return !isNaN(date.getTime()) ? date : null
+            }
+          } else if (dateStr.includes("-")) {
+            const date = new Date(dateStr)
+            return !isNaN(date.getTime()) ? date : null
+          } else {
+            const date = new Date(dateStr)
+            return !isNaN(date.getTime()) ? date : null
+          }
+          
+          return null
+        }
+        
+        const itemDate = parseDate(item.date)
         const startDate = new Date(dateRange.start)
         const endDate = new Date(dateRange.end)
+        
+        if (!itemDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return false
+        }
+        
         return itemDate >= startDate && itemDate <= endDate
       })
     }

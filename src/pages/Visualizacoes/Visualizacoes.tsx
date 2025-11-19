@@ -232,8 +232,15 @@ const Visualizacoes: React.FC = () => {
               vtr100: impressions > 0 && videoCompletions > 0 ? (videoCompletions / impressions) * 100 : 0,
               tipoCompra: tipoCompra,
               modalidade: modalidade,
-              tipoFormato: item["video_estatico_audio"] === "Video" ? "Vídeo" : 
-                          item["video_estatico_audio"] === "Audio" ? "Audio" : "Estático",
+              tipoFormato: (() => {
+                // Se o campo video_estatico_audio estiver preenchido, usar ele
+                if (item["video_estatico_audio"] === "Video") return "Vídeo"
+                if (item["video_estatico_audio"] === "Audio") return "Audio"
+                // Se não estiver preenchido, mas houver visualizações de vídeo, considerar como vídeo
+                if (videoViews > 0 || videoCompletions > 0) return "Vídeo"
+                // Caso contrário, é estático
+                return "Estático"
+              })(),
             } as ProcessedData
           })
           .filter((item: ProcessedData) => {
