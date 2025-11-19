@@ -438,8 +438,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
             return
           }
 
-          // Aplicar filtro de Praça
-          if (!passaFiltroPraca(row, ga4Headers)) {
+          // Aplicar filtro de Modalidade
+          if (!passaFiltroModalidade(row, ga4Headers)) {
             return
           }
 
