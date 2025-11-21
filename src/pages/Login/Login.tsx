@@ -40,7 +40,7 @@ const Login: React.FC = () => {
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard CCBB - Flight 2</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard - campanha guarda chuva</h1>
             <p className="text-gray-600">Faça login para acessar o sistema</p>
           </div>
 

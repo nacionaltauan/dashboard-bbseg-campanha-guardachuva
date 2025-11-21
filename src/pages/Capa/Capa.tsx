@@ -115,7 +115,7 @@ const Capa: React.FC = () => {
           <div className="absolute inset-0 bg-black/20"></div>
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg">
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard - Campanha CCBB 2º Flight</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard BBseg - Campanha Guarda chuva</h1>
               <p className="text-base text-gray-700">
                 Informações sobre a campanha, objetivos e público-alvo.
               </p>
@@ -137,7 +137,7 @@ const Capa: React.FC = () => {
               <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Campanha:</p>
-                <p className="text-gray-700 text-sm">CCBB - 2º Flight</p>
+                <p className="text-gray-700 text-sm">Campanha guarda-chuva</p>
               </div>
             </div>
             
