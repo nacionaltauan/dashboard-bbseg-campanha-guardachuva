@@ -10,7 +10,7 @@ import EstrategiaOnline from "./pages/EstrategiaOnline/EstrategiaOnline"
 import VisaoGeral from "./pages/VisaoGeral/VisaoGeral"
 import Alcance from "./pages/Alcance/Alcance"
 import Visualizacoes from "./pages/Visualizacoes/Visualizacoes"
-// import CriativosTikTok from "./pages/CriativosTikTok/CriativosTikTok" // Temporariamente desativado - dados zerados
+import CriativosTikTok from "./pages/CriativosTikTok/CriativosTikTok"
 import CriativosMeta from "./pages/CriativosMetaAds/CriativosMetaAds"
 import Glossario from "./pages/Glossario/Glossario" // Nova importação para Glossario
 import "./App.css"
@@ -39,7 +39,7 @@ function App() {
                 <Route path="/visualizacoes" element={<Visualizacoes />} />
                 <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} />
                 <Route path="/criativos-meta" element={<CriativosMeta />} />
-                {/* <Route path="/criativos-tiktok" element={<CriativosTikTok />} /> */} {/* Temporariamente desativado - dados zerados */}
+                <Route path="/criativos-tiktok" element={<CriativosTikTok />} />
                 <Route path="/glossario" element={<Glossario />} /> {/* Nova rota para Glossario */}
               </Routes>
             </Layout>
