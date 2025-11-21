@@ -14,8 +14,7 @@ import CriativosTikTok from "./pages/CriativosTikTok/CriativosTikTok"
 import CriativosMeta from "./pages/CriativosMetaAds/CriativosMetaAds"
 import Glossario from "./pages/Glossario/Glossario" // Nova importação para Glossario
 import "./App.css"
-// Temporariamente desativado
-// import TrafegoEngajamento from "./pages/TrafegoEngajamento/TrafegoEngajamento"
+import TrafegoEngajamento from "./pages/TrafegoEngajamento/TrafegoEngajamento"
 
 // Substitua pelo seu Google Client ID
 const GOOGLE_CLIENT_ID = "815966239613-rmc18h1asv405hk42qetehm5aten52qi.apps.googleusercontent.com"
@@ -38,8 +37,7 @@ function App() {
                 <Route path="/visao-geral" element={<VisaoGeral />} />
                 <Route path="/alcance" element={<Alcance />} />
                 <Route path="/visualizacoes" element={<Visualizacoes />} />
-                {/* Temporariamente desativado */}
-                {/* <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} /> */}
+                <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} />
                 <Route path="/criativos-meta" element={<CriativosMeta />} />
                 <Route path="/criativos-tiktok" element={<CriativosTikTok />} />
                 <Route path="/glossario" element={<Glossario />} /> {/* Nova rota para Glossario */}

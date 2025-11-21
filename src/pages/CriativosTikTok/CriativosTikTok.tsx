@@ -92,19 +92,10 @@ const CriativosTikTok: React.FC = () => {
 
   useEffect(() => {
     const values = apiData?.data?.values
-    if (!values || values.length <= 1) {
-      console.log("TikTok: Dados não disponíveis ou estrutura incorreta:", apiData)
-      return
-    }
+    if (!values || values.length <= 1) return
 
     const headers = values[0]
     const rows = values.slice(1)
-    
-    console.log("TikTok: Headers encontrados:", headers)
-    console.log("TikTok: Total de linhas:", rows.length)
-    if (rows.length > 0) {
-      console.log("TikTok: Primeira linha de dados:", rows[0])
-    }
 
     const parseNumber = (v: string) => {
       if (!v?.trim()) return 0
@@ -127,46 +118,32 @@ const CriativosTikTok: React.FC = () => {
         const idx = headers.indexOf(field)
         return idx >= 0 ? (row[idx] ?? "") : ""
       }
-      
-      // Obter valores básicos da planilha (aba: Tiktok_tratado)
-      const impressions = parseInteger(get("Impressions"))
-      const clicks = parseInteger(get("Clicks")) // Existe na planilha
-      const cost = parseNumber(get("Total spent"))
-      const reach = parseInteger(get("Reach"))
-      const videoViews = parseInteger(get("Video views ") || get("Video views")) // Com ou sem espaço
-      const videoCompletions = parseInteger(get("Video completions ") || get("Video completions")) // Com ou sem espaço
-      
-      // Calcular valores derivados (não existem na planilha, precisam ser calculados)
-      const cpc = clicks > 0 ? cost / clicks : 0
-      const cpm = impressions > 0 ? (cost / impressions) * 1000 : 0
-      const frequency = reach > 0 ? impressions / reach : 0
-      
       return {
         date: get("Date"),
         campaignName: get("Campaign name"),
-        adGroupName: get("Ad group name") || "", // Pode não existir
-        adName: get("Creative title") || get("Ad name"), // Usar Creative title se Ad name não existir
-        adText: get("Ad text") || "", // Pode não existir
-        videoThumbnailUrl: get("Video thumbnail URL") || "", // Pode não existir
-        impressions: impressions,
-        clicks: clicks,
-        cost: cost,
-        cpc: cpc,
-        cpm: cpm,
-        reach: reach,
-        frequency: frequency,
-        results: parseInteger(get("Results") || get("Total engagements")), // Usar Total engagements se Results não existir
-        videoViews: videoViews,
-        twoSecondVideoViews: parseInteger(get("2-second video views") || get("Video starts")), // Usar Video starts se não existir
+        adGroupName: get("Ad group name"),
+        adName: get("Ad name"),
+        adText: get("Ad text"),
+        videoThumbnailUrl: get("Video thumbnail URL"),
+        impressions: parseInteger(get("Impressions")),
+        clicks: parseInteger(get("Clicks")),
+        cost: parseNumber(get("Cost")),
+        cpc: parseNumber(get("CPC")),
+        cpm: parseNumber(get("CPM")),
+        reach: parseInteger(get("Reach")),
+        frequency: parseNumber(get("Frequency")),
+        results: parseInteger(get("Results")),
+        videoViews: parseInteger(get("Video views")),
+        twoSecondVideoViews: parseInteger(get("2-second video views")),
         videoViews25: parseInteger(get("Video views at 25%")),
         videoViews50: parseInteger(get("Video views at 50%")),
         videoViews75: parseInteger(get("Video views at 75%")),
-        videoViews100: parseInteger(get("Video views at 100%") || get("Video completions ") || get("Video completions")), // Usar Video completions se não existir
-        profileVisits: parseInteger(get("Profile visits")), // Pode não existir
-        paidLikes: parseInteger(get("Paid likes")), // Pode não existir
-        paidComments: parseInteger(get("Paid comments")), // Pode não existir
-        paidShares: parseInteger(get("Paid shares")), // Pode não existir
-        paidFollows: parseInteger(get("Paid follows")), // Pode não existir
+        videoViews100: parseInteger(get("Video views at 100%")),
+        profileVisits: parseInteger(get("Profile visits")),
+        paidLikes: parseInteger(get("Paid likes")),
+        paidComments: parseInteger(get("Paid comments")),
+        paidShares: parseInteger(get("Paid shares")),
+        paidFollows: parseInteger(get("Paid follows")),
       }
     })
 
@@ -174,48 +151,12 @@ const CriativosTikTok: React.FC = () => {
 
     setProcessedData(processed)
 
-    // Função para validar e converter data
-    const parseAndValidateDate = (dateStr: string): Date | null => {
-      if (!dateStr || !dateStr.trim()) return null
-      
-      // Tentar diferentes formatos de data
-      let date: Date | null = null
-      
-      // Formato DD/MM/YYYY
-      if (dateStr.includes("/")) {
-        const parts = dateStr.split("/")
-        if (parts.length === 3) {
-          const [day, month, year] = parts
-          date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
-        }
-      }
-      // Formato YYYY-MM-DD
-      else if (dateStr.includes("-")) {
-        date = new Date(dateStr)
-      }
-      // Tentar parse direto
-      else {
-        date = new Date(dateStr)
-      }
-      
-      // Verificar se a data é válida
-      if (date && !isNaN(date.getTime())) {
-        return date
-      }
-      
-      return null
-    }
+    const allDates = processed.map((i) => new Date(i.date)).sort((a, b) => a.getTime() - b.getTime())
 
-    // Filtrar e converter apenas datas válidas
-    const validDates = processed
-      .map((i) => parseAndValidateDate(i.date))
-      .filter((date): date is Date => date !== null)
-      .sort((a, b) => a.getTime() - b.getTime())
-
-    if (validDates.length > 0) {
+    if (allDates.length > 0) {
       setDateRange({
-        start: validDates[0].toISOString().slice(0, 10),
-        end: validDates[validDates.length - 1].toISOString().slice(0, 10),
+        start: allDates[0].toISOString().slice(0, 10),
+        end: allDates[allDates.length - 1].toISOString().slice(0, 10),
       })
     }
 
@@ -302,36 +243,9 @@ const CriativosTikTok: React.FC = () => {
     // Filtro por data (lógica existente)
     if (dateRange.start && dateRange.end) {
       filtered = filtered.filter((item) => {
-        // Função auxiliar para validar e converter data
-        const parseDate = (dateStr: string): Date | null => {
-          if (!dateStr || !dateStr.trim()) return null
-          
-          if (dateStr.includes("/")) {
-            const parts = dateStr.split("/")
-            if (parts.length === 3) {
-              const [day, month, year] = parts
-              const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
-              return !isNaN(date.getTime()) ? date : null
-            }
-          } else if (dateStr.includes("-")) {
-            const date = new Date(dateStr)
-            return !isNaN(date.getTime()) ? date : null
-          } else {
-            const date = new Date(dateStr)
-            return !isNaN(date.getTime()) ? date : null
-          }
-          
-          return null
-        }
-        
-        const itemDate = parseDate(item.date)
+        const itemDate = new Date(item.date)
         const startDate = new Date(dateRange.start)
         const endDate = new Date(dateRange.end)
-        
-        if (!itemDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          return false
-        }
-        
         return itemDate >= startDate && itemDate <= endDate
       })
     }
