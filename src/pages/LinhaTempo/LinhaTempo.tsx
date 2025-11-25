@@ -164,7 +164,17 @@ const LinhaTempo: React.FC = () => {
           if (decimalPlaces > 2) {
             // Se tem mais de 2 casas, pode ser um erro de parse
             // Vamos arredondar para 2 casas usando uma abordagem precisa
-            return Math.round(parsed * 100) / 100
+            const rounded = Math.round(parsed * 100) / 100
+            // Debug: logar valores com mais de 2 casas decimais
+            if (process.env.NODE_ENV === 'development' && Math.abs(parsed - rounded) > 0.001) {
+              console.warn('Valor com mais de 2 casas decimais parseado:', {
+                original: stringValue,
+                parsed,
+                rounded,
+                difference: parsed - rounded
+              })
+            }
+            return rounded
           }
           
           return parsed
@@ -228,6 +238,20 @@ const LinhaTempo: React.FC = () => {
         })
 
       processed.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      
+      // Debug: verificar se há duplicação ou problemas
+      const totalBeforeFilter = processed.reduce((sum, item) => {
+        const value = Number(item.totalSpent) || 0
+        return sum + Math.round(value * 100)
+      }, 0) / 100
+      
+      console.log('=== PROCESSAMENTO DE DADOS DEBUG ===')
+      console.log('Total de linhas processadas:', processed.length)
+      console.log('Total de investimento (antes de filtros):', totalBeforeFilter)
+      console.log('Esperado da planilha: 36193.36')
+      console.log('Diferença:', Math.abs(totalBeforeFilter - 36193.36))
+      console.log('====================================')
+      
       setProcessedData(processed)
 
       if (processed.length > 0) {
@@ -405,6 +429,8 @@ const LinhaTempo: React.FC = () => {
     // Converter para centavos, somar, e converter de volta para reais
     // Esta abordagem evita erros de precisão de ponto flutuante
     let totalInCents = 0
+    let directSum = 0 // Para comparação
+    const debugValues: Array<{ value: number, cents: number, original: any }> = []
     
     for (const item of filteredData) {
       // Garantir que o valor seja válido e numérico
@@ -415,12 +441,34 @@ const LinhaTempo: React.FC = () => {
         // Isso evita problemas de precisão de ponto flutuante
         const cents = Math.round(value * 100)
         totalInCents += cents
+        directSum += value
+        
+        // Debug: coletar valores para análise
+        if (debugValues.length < 10 || value > 1000) {
+          debugValues.push({
+            value,
+            cents,
+            original: item.totalSpent
+          })
+        }
       }
     }
     
     // Converter de volta para reais
     // O resultado já está em centavos, então dividir por 100
     const result = totalInCents / 100
+    
+    // Debug temporário
+    console.log('=== INVESTIMENTO TOTAL DEBUG ===')
+    console.log('Total em centavos:', totalInCents)
+    console.log('Total em reais (centavos/100):', result)
+    console.log('Soma direta (sem conversão):', directSum)
+    console.log('Diferença:', Math.abs(result - directSum))
+    console.log('Esperado: 36193.36')
+    console.log('Diferença do esperado:', Math.abs(result - 36193.36))
+    console.log('Total de itens processados:', filteredData.length)
+    console.log('Amostra de valores:', debugValues.slice(0, 5))
+    console.log('================================')
     
     // O resultado já está correto, não precisa arredondar novamente
     return result
