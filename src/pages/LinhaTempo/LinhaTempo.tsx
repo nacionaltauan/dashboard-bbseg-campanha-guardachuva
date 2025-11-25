@@ -201,9 +201,16 @@ const LinhaTempo: React.FC = () => {
 
       if (dateRange.start && dateRange.end) {
         filtered = filtered.filter((item) => {
-          const itemDate = new Date(item.date)
-          const startDate = new Date(dateRange.start)
-          const endDate = new Date(dateRange.end)
+          // Função para normalizar data para comparação (apenas data, sem hora)
+          const normalizeDate = (date: Date): Date => {
+            const normalized = new Date(date)
+            normalized.setHours(0, 0, 0, 0)
+            return normalized
+          }
+
+          const itemDate = normalizeDate(new Date(item.date))
+          const startDate = normalizeDate(new Date(dateRange.start))
+          const endDate = normalizeDate(new Date(dateRange.end))
           return itemDate >= startDate && itemDate <= endDate
         })
       }

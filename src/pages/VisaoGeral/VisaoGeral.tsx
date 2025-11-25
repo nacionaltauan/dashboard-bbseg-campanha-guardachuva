@@ -205,14 +205,21 @@ const VisaoGeral: React.FC = () => {
         filtered = filtered.filter((item) => {
           if (!item.date) return false
 
+          // Função para normalizar data para comparação (apenas data, sem hora)
+          const normalizeDate = (date: Date): Date => {
+            const normalized = new Date(date)
+            normalized.setHours(0, 0, 0, 0)
+            return normalized
+          }
+
           // Converter data de DD/MM/YYYY para Date object
           const dateParts = item.date.split("/")
           if (dateParts.length !== 3) return false
 
           const [day, month, year] = dateParts
-          const itemDate = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
-          const startDate = new Date(dateRange.start)
-          const endDate = new Date(dateRange.end)
+          const itemDate = normalizeDate(new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day)))
+          const startDate = normalizeDate(new Date(dateRange.start))
+          const endDate = normalizeDate(new Date(dateRange.end))
 
           return itemDate >= startDate && itemDate <= endDate
         })

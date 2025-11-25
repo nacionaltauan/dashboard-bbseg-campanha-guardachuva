@@ -483,16 +483,24 @@ const CriativosMeta: FC = () => {
     // Filtro por período
     if (dateRange.start && dateRange.end) {
       filtered = filtered.filter((item) => {
+        // Função para normalizar data para comparação (apenas data, sem hora)
+        const normalizeDate = (date: Date): Date => {
+          const normalized = new Date(date)
+          normalized.setHours(0, 0, 0, 0)
+          return normalized
+        }
+
         const dateParts = item.date.split("/")
         let itemDate: Date
         if (dateParts.length === 3) {
-          itemDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`)
+          // Criar data no timezone local para evitar problemas de timezone
+          itemDate = normalizeDate(new Date(Number.parseInt(dateParts[2]), Number.parseInt(dateParts[1]) - 1, Number.parseInt(dateParts[0])))
         } else {
-          itemDate = new Date(item.date)
+          itemDate = normalizeDate(new Date(item.date))
         }
 
-        const startDate = new Date(dateRange.start)
-        const endDate = new Date(dateRange.end)
+        const startDate = normalizeDate(new Date(dateRange.start))
+        const endDate = normalizeDate(new Date(dateRange.end))
         return itemDate >= startDate && itemDate <= endDate
       })
     }

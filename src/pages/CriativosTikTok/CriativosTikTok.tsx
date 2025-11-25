@@ -279,6 +279,13 @@ const CriativosTikTok: React.FC = () => {
     // Filtro por data (lógica existente)
     if (dateRange.start && dateRange.end) {
       filtered = filtered.filter((item) => {
+        // Função auxiliar para normalizar data para comparação (apenas data, sem hora)
+        const normalizeDate = (date: Date): Date => {
+          const normalized = new Date(date)
+          normalized.setHours(0, 0, 0, 0)
+          return normalized
+        }
+        
         // Função auxiliar para validar e converter data
         const parseDate = (dateStr: string): Date | null => {
           if (!dateStr || !dateStr.trim()) return null
@@ -288,22 +295,28 @@ const CriativosTikTok: React.FC = () => {
             if (parts.length === 3) {
               const [day, month, year] = parts
               const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
-              return !isNaN(date.getTime()) ? date : null
+              return !isNaN(date.getTime()) ? normalizeDate(date) : null
             }
           } else if (dateStr.includes("-")) {
-            const date = new Date(dateStr)
-            return !isNaN(date.getTime()) ? date : null
+            // Formato YYYY-MM-DD - criar data no timezone local
+            const parts = dateStr.split("-")
+            if (parts.length === 3) {
+              const [year, month, day] = parts
+              const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+              return !isNaN(date.getTime()) ? normalizeDate(date) : null
+            }
           } else {
             const date = new Date(dateStr)
-            return !isNaN(date.getTime()) ? date : null
+            return !isNaN(date.getTime()) ? normalizeDate(date) : null
           }
           
           return null
         }
         
         const itemDate = parseDate(item.date)
-        const startDate = new Date(dateRange.start)
-        const endDate = new Date(dateRange.end)
+        // Normalizar as datas do range também
+        const startDate = normalizeDate(new Date(dateRange.start))
+        const endDate = normalizeDate(new Date(dateRange.end))
         
         if (!itemDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
           return false

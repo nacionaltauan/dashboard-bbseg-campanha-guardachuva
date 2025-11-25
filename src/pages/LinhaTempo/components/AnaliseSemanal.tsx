@@ -97,22 +97,39 @@ const AnaliseSemanal: React.FC<AnaliseSemanalProps> = ({
   const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   // Função para criar datas locais sem problemas de timezone
   const createLocalDate = (dateStr: string) => {
-    if (!dateStr) return new Date()
+    if (!dateStr) {
+      const date = new Date()
+      date.setHours(0, 0, 0, 0)
+      return date
+    }
+
+    let date: Date
 
     // Se a data está no formato DD/MM/YYYY, converter para YYYY-MM-DD
     if (dateStr.includes("/")) {
       const parts = dateStr.split("/")
       if (parts.length === 3) {
         const [day, month, year] = parts
-        return new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+        date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+      } else {
+        date = new Date()
       }
+    } else if (dateStr.includes("-")) {
+      // Se a data está no formato YYYY-MM-DD
+      const parts = dateStr.split("-")
+      if (parts.length === 3) {
+        const [year, month, day] = parts
+        date = new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+      } else {
+        date = new Date()
+      }
+    } else {
+      date = new Date()
     }
 
-    // Se a data está no formato YYYY-MM-DD
-    const parts = dateStr.split("-")
-    if (parts.length !== 3) return new Date()
-    const [year, month, day] = parts
-    return new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
+    // Normalizar para meia-noite (apenas data, sem hora)
+    date.setHours(0, 0, 0, 0)
+    return date
   }
 
   // Configurar automaticamente os últimos 7 dias

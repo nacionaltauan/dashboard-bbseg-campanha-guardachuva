@@ -221,9 +221,16 @@ const Alcance: React.FC = () => {
         if (!itemDateISO) return false
 
         try {
-          const itemDate = new Date(itemDateISO)
-          const startDate = new Date(dateRange.start)
-          const endDate = new Date(dateRange.end)
+          // Função para normalizar data para comparação (apenas data, sem hora)
+          const normalizeDate = (date: Date): Date => {
+            const normalized = new Date(date)
+            normalized.setHours(0, 0, 0, 0)
+            return normalized
+          }
+
+          const itemDate = normalizeDate(new Date(itemDateISO))
+          const startDate = normalizeDate(new Date(dateRange.start))
+          const endDate = normalizeDate(new Date(dateRange.end))
           return itemDate >= startDate && itemDate <= endDate
         } catch (error) {
           console.warn("Erro ao processar data:", itemDateISO)
