@@ -88,17 +88,6 @@ const LinhaTempo: React.FC = () => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
 
-      // Encontrar o índice correto da coluna "Total spent"
-      const totalSpentHeaderIndex = header.findIndex((h: string) => 
-        h && h.trim().toLowerCase() === "total spent"
-      )
-      
-      console.log('Header Total Spent Index:', totalSpentHeaderIndex)
-      console.log('Header completo:', header)
-      if (totalSpentHeaderIndex >= 0) {
-        console.log('Nome da coluna encontrada:', header[totalSpentHeaderIndex])
-      }
-
       const dataAsObjects = rows
         .filter((row: any[]) => {
           // Filtrar linhas completamente vazias
@@ -109,11 +98,6 @@ const LinhaTempo: React.FC = () => {
         header.forEach((key: string, index: number) => {
           obj[key] = row[index]
         })
-        // Adicionar o índice da coluna Total spent para debug
-        if (totalSpentHeaderIndex >= 0) {
-          obj["__totalSpentIndex"] = totalSpentHeaderIndex
-          obj["__totalSpentValue"] = row[totalSpentHeaderIndex]
-        }
         return obj
       })
 
@@ -220,21 +204,8 @@ const LinhaTempo: React.FC = () => {
         const impressions = item["Impressions"]
         const clicks = item["Clicks"]
         
-        // Usar o valor correto da coluna Total spent usando o índice
-        // Se o índice foi armazenado no objeto, usar o valor direto
-        const totalSpentValue = item["__totalSpentValue"] !== undefined 
-          ? item["__totalSpentValue"] 
-          : (item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"])
-        
-        // Debug para os primeiros valores
-        if (processed.length < 3) {
-          console.log('Total Spent Debug:', {
-            headerIndex: item["__totalSpentIndex"],
-            rawValue: totalSpentValue,
-            itemTotalSpent: item["Total spent"],
-            allKeys: Object.keys(item).filter(k => !k.startsWith('__'))
-          })
-        }
+        // Ler a coluna pelo nome (tentar variações)
+        const totalSpentValue = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"] || item["Total spent "] || item["Total Spent "]
         
         const totalSpent = parseNumber(totalSpentValue)
         const videoViews = item["Video views "]
@@ -278,13 +249,21 @@ const LinhaTempo: React.FC = () => {
         return sum + Math.round(value * 100)
       }, 0) / 100
       
-      // Coletar todos os valores para análise detalhada
-      const allValues = processed.map((item, index) => {
-        const original = dataAsObjects[index]?.["Total spent"]
-        const parsed = item.totalSpent
-        const cents = Math.round(parsed * 100)
+      // Coletar TODOS os valores para análise detalhada
+      // parsed = valor que está sendo usado atualmente (pode estar errado se pegou coluna errada)
+      // reparsed = valor re-parseado do valor original da planilha (correto)
+      const allValues = processed.map((item, processedIndex) => {
+        // Encontrar o item original em dataAsObjects usando os campos únicos
+        const originalItem = dataAsObjects.find((orig: any) => 
+          orig["Date"] === item.date.split("-").reverse().join("/") && 
+          orig["Campaign name"] === item.campaignName &&
+          orig["Creative title"] === item.creativeTitle
+        ) || dataAsObjects[processedIndex] // Fallback para índice se não encontrar
         
-        // Tentar re-parsear o valor original para comparar
+        const original = originalItem?.["Total spent"] || originalItem?.["Total Spent"] || originalItem?.["total spent"]
+        const parsed = item.totalSpent // Valor atual sendo usado (pode estar errado)
+        
+        // Re-parsear o valor original da planilha para comparar (este é o correto)
         let reParsed = 0
         if (original) {
           const stringValue = original.toString().trim()
@@ -310,41 +289,66 @@ const LinhaTempo: React.FC = () => {
           }
         }
         
+        // Coletar TODOS os valores do item para ver qual coluna está sendo lida
+        const allItemValues: Record<string, any> = {}
+        if (originalItem) {
+          header.forEach((key: string) => {
+            allItemValues[key] = originalItem[key]
+          })
+        }
+        
         return {
-          index,
-          original,
-          parsed,
-          reParsed,
-          cents,
-          difference: Math.abs(parsed - reParsed)
+          linha: processedIndex + 1,
+          original: original, // Valor original da coluna "Total spent" na planilha
+          parsed: parsed, // Valor que está sendo usado (pode estar errado - pegando outra coluna)
+          reparsed: reParsed, // Valor re-parseado do original (correto)
+          diferenca: Math.abs(parsed - reParsed), // Diferença entre parsed e reparsed
+          todasColunas: allItemValues // Todas as colunas para identificar qual está sendo lida errado
         }
       })
       
-      // Encontrar valores com diferença no re-parse
-      const problematicValues = allValues.filter(v => v.difference > 0.001)
+      // Calcular totais
+      const totalParsed = allValues.reduce((sum, v) => sum + Math.round(v.parsed * 100), 0) / 100
+      const totalReparsed = allValues.reduce((sum, v) => sum + Math.round(v.reparsed * 100), 0) / 100
       
-      // Calcular soma esperada (re-parseando todos os valores)
-      const expectedTotal = allValues.reduce((sum, v) => {
-        return sum + Math.round((v.reParsed || v.parsed) * 100)
-      }, 0) / 100
-      
-      console.log('=== PROCESSAMENTO DE DADOS DEBUG ===')
-      console.log('Total de linhas processadas:', processed.length)
-      console.log('Total de investimento (antes de filtros):', totalBeforeFilter)
-      console.log('Total esperado (re-parseado):', expectedTotal)
+      console.log('=== ANÁLISE COMPLETA DE TODAS AS LINHAS ===')
+      console.log('EXPLICAÇÃO:')
+      console.log('- parsed: valor que está sendo usado atualmente (pode estar errado se pegou coluna errada)')
+      console.log('- reparsed: valor re-parseado do valor original da planilha (correto)')
+      console.log('- diferenca: diferença entre parsed e reparsed')
+      console.log('')
+      console.log('RESUMO:')
+      console.log('Total de linhas:', processed.length)
+      console.log('Total usando PARSED (atual - pode estar errado):', totalParsed)
+      console.log('Total usando REPARSED (correto):', totalReparsed)
       console.log('Esperado da planilha: 36193.36')
-      console.log('Diferença calculada:', Math.abs(totalBeforeFilter - 36193.36))
-      console.log('Diferença do esperado:', Math.abs(expectedTotal - 36193.36))
-      console.log('Valores com diferença no parse:', problematicValues.length)
-      if (problematicValues.length > 0) {
-        console.log('Primeiros valores problemáticos:', problematicValues.slice(0, 5))
-      }
-      console.log('Primeiros 10 valores:', allValues.slice(0, 10).map(v => ({
-        original: v.original,
-        parsed: v.parsed,
-        reParsed: v.reParsed,
-        diff: v.difference
-      })))
+      console.log('Diferença do esperado (parsed):', Math.abs(totalParsed - 36193.36))
+      console.log('Diferença do esperado (reparsed):', Math.abs(totalReparsed - 36193.36))
+      console.log('')
+      console.log('=== TODAS AS LINHAS (para análise) ===')
+      console.log('Formato: {linha, original, parsed, reparsed, diferenca, todasColunas}')
+      console.log('')
+      allValues.forEach((v, idx) => {
+        if (v.diferenca > 0.01) { // Mostrar apenas linhas com diferença significativa
+          console.log(`Linha ${v.linha}:`, {
+            original: v.original,
+            parsed: v.parsed,
+            reparsed: v.reparsed,
+            diferenca: v.diferenca.toFixed(2),
+            // Mostrar apenas algumas colunas relevantes para identificar o problema
+            colunas: {
+              'Date': v.todasColunas['Date'],
+              'Total spent': v.todasColunas['Total spent'],
+              'Impressions': v.todasColunas['Impressions'],
+              'Clicks': v.todasColunas['Clicks'],
+              'Reach': v.todasColunas['Reach']
+            }
+          })
+        }
+      })
+      console.log('')
+      console.log('=== TODAS AS 138 LINHAS COMPLETAS ===')
+      console.log(JSON.stringify(allValues, null, 2))
       console.log('====================================')
       
       setProcessedData(processed)
