@@ -88,7 +88,12 @@ const LinhaTempo: React.FC = () => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
 
-      const dataAsObjects = rows.map((row: any[]) => {
+      const dataAsObjects = rows
+        .filter((row: any[]) => {
+          // Filtrar linhas completamente vazias
+          return row && row.some((cell: any) => cell !== null && cell !== undefined && cell !== "")
+        })
+        .map((row: any[]) => {
         const obj: { [key: string]: any } = {}
         header.forEach((key: string, index: number) => {
           obj[key] = row[index]
@@ -96,18 +101,73 @@ const LinhaTempo: React.FC = () => {
         return obj
       })
 
-      const processed: DataPoint[] = dataAsObjects.map((item: any) => {
+      const processed: DataPoint[] = dataAsObjects
+        .filter((item: any) => {
+          // Filtrar linhas vazias ou sem data válida
+          const date = item["Date"]
+          return date && date.toString().trim() !== ""
+        })
+        .map((item: any) => {
         const parseNumber = (value: string | number) => {
-          if (!value) return 0
-          const stringValue = value.toString()
-          const cleanValue = stringValue
-            .replace(/R\$\s*/g, "")
-            .replace(/\./g, "")
-            .replace(",", ".")
-            .trim()
+          if (!value || value === "" || value === null || value === undefined) return 0
+          
+          // Se já é um número, retornar diretamente (sem arredondar)
+          if (typeof value === 'number') {
+            return isNaN(value) || !isFinite(value) ? 0 : value
+          }
+          
+          const stringValue = value.toString().trim()
+          if (stringValue === "" || stringValue === "-" || stringValue === "N/A") return 0
+          
+          // Remover R$ e espaços
+          let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
+          
+          // Se não tem vírgula nem ponto, pode ser um número inteiro
+          if (!cleanValue.includes(",") && !cleanValue.includes(".")) {
+            const parsed = Number.parseFloat(cleanValue)
+            return isNaN(parsed) ? 0 : parsed
+          }
+          
+          // Remover pontos (separadores de milhar) - mas preservar a vírgula decimal
+          // Primeiro, verificar se há vírgula (formato brasileiro)
+          if (cleanValue.includes(",")) {
+            // Formato brasileiro: 1.234,56 ou 293,79
+            // Contar quantas vírgulas existem
+            const commaCount = (cleanValue.match(/,/g) || []).length
+            if (commaCount === 1) {
+              // Uma vírgula - provavelmente é decimal
+              cleanValue = cleanValue.replace(/\./g, "") // Remove separadores de milhar
+              cleanValue = cleanValue.replace(",", ".") // Converte vírgula para ponto
+            } else {
+              // Múltiplas vírgulas - tratar como separador
+              cleanValue = cleanValue.replace(/,/g, "")
+            }
+          } else if (cleanValue.includes(".")) {
+            // Formato internacional: 1234.56 - verificar se é decimal ou separador de milhar
+            const parts = cleanValue.split(".")
+            if (parts.length === 2 && parts[1].length <= 2) {
+              // Provavelmente é decimal (ex: 1234.56)
+              // Não fazer nada, já está no formato correto
+            } else {
+              // Provavelmente é separador de milhar (ex: 1.234.567)
+              cleanValue = cleanValue.replace(/\./g, "")
+            }
+          }
+          
           const parsed = Number.parseFloat(cleanValue)
-          // Não arredondar aqui - manter precisão completa e arredondar apenas no final
-          return isNaN(parsed) ? 0 : parsed
+          if (isNaN(parsed)) return 0
+          
+          // Se o valor tem mais de 2 casas decimais, pode ser um problema de parse
+          // Vamos garantir que valores monetários tenham no máximo 2 casas decimais
+          // Mas fazer isso de forma precisa para não perder informação
+          const decimalPlaces = (parsed.toString().split('.')[1] || '').length
+          if (decimalPlaces > 2) {
+            // Se tem mais de 2 casas, pode ser um erro de parse
+            // Vamos arredondar para 2 casas usando uma abordagem precisa
+            return Math.round(parsed * 100) / 100
+          }
+          
+          return parsed
         }
 
         const parseInteger = (value: string | number) => {
@@ -151,7 +211,7 @@ const LinhaTempo: React.FC = () => {
           reach: parseInteger(reach),
           impressions: parseInteger(impressions),
           clicks: parseInteger(clicks),
-          totalSpent: parseNumber(totalSpent),
+          totalSpent: parseNumber(totalSpent), // Manter precisão completa
           videoViews: parseInteger(videoViews),
           videoViews25: parseInteger(videoViews25),
           videoViews50: parseInteger(videoViews50),
@@ -165,7 +225,7 @@ const LinhaTempo: React.FC = () => {
         }
 
         return dataPoint
-      })
+        })
 
       processed.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       setProcessedData(processed)
@@ -344,15 +404,26 @@ const LinhaTempo: React.FC = () => {
   const totalInvestment = useMemo(() => {
     // Converter para centavos, somar, e converter de volta para reais
     // Esta abordagem evita erros de precisão de ponto flutuante
-    const totalInCents = filteredData.reduce((sum, item) => {
-      // Garantir que o valor seja tratado como número e converter para centavos
-      const value = Number(item.totalSpent) || 0
-      // Converter para centavos arredondando para evitar imprecisões
-      const cents = Math.round(value * 100)
-      return sum + cents
-    }, 0)
-    // Converter de volta para reais - o resultado já está correto em centavos
-    return totalInCents / 100
+    let totalInCents = 0
+    
+    for (const item of filteredData) {
+      // Garantir que o valor seja válido e numérico
+      const value = Number(item.totalSpent)
+      if (!isNaN(value) && isFinite(value) && value >= 0) {
+        // Converter diretamente para centavos sem usar toFixed
+        // Multiplicar por 100 e arredondar para o inteiro mais próximo
+        // Isso evita problemas de precisão de ponto flutuante
+        const cents = Math.round(value * 100)
+        totalInCents += cents
+      }
+    }
+    
+    // Converter de volta para reais
+    // O resultado já está em centavos, então dividir por 100
+    const result = totalInCents / 100
+    
+    // O resultado já está correto, não precisa arredondar novamente
+    return result
   }, [filteredData])
   const totalImpressions = useMemo(() => filteredData.reduce((sum, item) => sum + item.impressions, 0), [filteredData])
   const totalClicks = useMemo(() => filteredData.reduce((sum, item) => sum + item.clicks, 0), [filteredData])
