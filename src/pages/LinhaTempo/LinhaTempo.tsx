@@ -203,7 +203,22 @@ const LinhaTempo: React.FC = () => {
         const reach = item["Reach"]
         const impressions = item["Impressions"]
         const clicks = item["Clicks"]
-        const totalSpent = item["Total spent"]
+        
+        // Verificar todas as possíveis variações do nome da coluna
+        const totalSpentRaw = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"] || item["Total Spent "] || item["Total spent "]
+        
+        // Se não encontrou, tentar encontrar pelo índice (geralmente é a coluna 6 ou 7)
+        let totalSpentValue = totalSpentRaw
+        if (!totalSpentValue) {
+          const totalSpentIndex = header.findIndex((h: string) => 
+            h && (h.toLowerCase().includes("total") && h.toLowerCase().includes("spent"))
+          )
+          if (totalSpentIndex >= 0) {
+            totalSpentValue = item[header[totalSpentIndex]]
+          }
+        }
+        
+        const totalSpent = parseNumber(totalSpentValue)
         const videoViews = item["Video views "]
         const videoViews25 = item["Video views at 25%"]
         const videoViews50 = item["Video views at 50%"]
@@ -221,7 +236,7 @@ const LinhaTempo: React.FC = () => {
           reach: parseInteger(reach),
           impressions: parseInteger(impressions),
           clicks: parseInteger(clicks),
-          totalSpent: parseNumber(totalSpent), // Manter precisão completa
+          totalSpent: totalSpent, // Já foi parseado acima, não parsear novamente!
           videoViews: parseInteger(videoViews),
           videoViews25: parseInteger(videoViews25),
           videoViews50: parseInteger(videoViews50),
