@@ -8,9 +8,9 @@ const API_NACIONAL_URL = "https://nacional-api-gray.vercel.app"
 
 export const API_NACIONAL_URL_v2 = "https://nacional-api-gray.vercel.app"
 export const PLATFORM_FOLDERS = {
-  meta: "1icGKbn9be_g7d50Xv4JQyxsZET60QN85",
-  pinterest: "1tgeWGAHm7TJSCfhQ25Lffy-tiZ46D6kp",
-  tiktok: "1fzmoC-KMhzjfvMunyHk7NtxfbzF7pdpu",
+  meta: "1Z6v9xdqE8KlPfhVH9-IsLbB_wmf4w5qD",
+  pinterest: "1UCK269aE0Acx0WXoszm0IooXnDMQgWeX",
+  tiktok: "14F3_8DxxLt7w4k5PXX0C9Re1tvVUKEj-",
 } as const
 
 // Tipos para as respostas da API

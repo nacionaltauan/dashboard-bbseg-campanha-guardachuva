@@ -69,8 +69,10 @@ const CriativosTikTok: React.FC = () => {
 
   // Função para obter dados de benchmark do TikTok
   const getBenchmarkData = (creative: CreativeData) => {
-    // TikTok sempre é vídeo
-    const key = `TIK TOK_VÍDEO`
+    const modalidade = detectModalidadeFromCreative(creative.adName)
+    if (!modalidade) return null
+    
+    const key = `TIK TOK_${modalidade}`
     return benchmarkMap.get(key)
   }
 

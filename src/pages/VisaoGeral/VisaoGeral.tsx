@@ -259,6 +259,9 @@ const VisaoGeral: React.FC = () => {
       vtr: number
     }> = []
 
+    // Modalidades disponíveis
+    const modalidades = ["empresarial", "residencial", "vida"]
+
     availableVehicles.forEach((vehicle) => {
       // Mapear veículo para chave do benchmark
       let benchmarkKey = ""
@@ -271,34 +274,22 @@ const VisaoGeral: React.FC = () => {
         benchmarkKey = vehicle.toUpperCase()
       }
 
-      // Buscar benchmarks para DISPLAY e VÍDEO
-      const displayKey = `${benchmarkKey}_DISPLAY`
-      const videoKey = `${benchmarkKey}_VÍDEO`
+      // Buscar benchmarks para cada modalidade
+      modalidades.forEach((modalidade) => {
+        const key = `${benchmarkKey}_${modalidade}`
+        const benchmark = benchmarkMap.get(key)
 
-      const displayBenchmark = benchmarkMap.get(displayKey)
-      const videoBenchmark = benchmarkMap.get(videoKey)
-
-      if (displayBenchmark) {
-        benchmarks.push({
-          vehicle,
-          mediaType: "DISPLAY",
-          cpm: displayBenchmark.cpm || 0,
-          cpc: displayBenchmark.cpc || 0,
-          ctr: displayBenchmark.ctr || 0,
-          vtr: displayBenchmark.completionRate || 0,
-        })
-      }
-
-      if (videoBenchmark) {
-        benchmarks.push({
-          vehicle,
-          mediaType: "VÍDEO",
-          cpm: videoBenchmark.cpm || 0,
-          cpc: videoBenchmark.cpc || 0,
-          ctr: videoBenchmark.ctr || 0,
-          vtr: videoBenchmark.completionRate || 0,
-        })
-      }
+        if (benchmark) {
+          benchmarks.push({
+            vehicle,
+            mediaType: modalidade.charAt(0).toUpperCase() + modalidade.slice(1), // Capitalizar primeira letra
+            cpm: benchmark.cpm || 0,
+            cpc: benchmark.cpc || 0,
+            ctr: benchmark.ctr || 0,
+            vtr: benchmark.completionRate || 0,
+          })
+        }
+      })
     })
 
     return benchmarks

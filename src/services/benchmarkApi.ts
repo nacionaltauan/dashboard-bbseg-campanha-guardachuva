@@ -4,7 +4,10 @@ import { apiNacional } from "./api"
 // Interface para dados de benchmark
 export interface BenchmarkData {
   veiculo: string
-  tipoMidia: string
+  modalidade: string
+  impressions: number
+  clicks: number
+  cost: number // Custo total
   cpm: number
   cpc: number
   ctr: number
@@ -61,23 +64,55 @@ export const processBenchmarkData = (apiData: any): Map<string, BenchmarkData> =
     
     rows.forEach((row: any[]) => {
       const veiculo = row[0]?.toUpperCase() || ""
-      const tipoMidia = row[1]?.toUpperCase() || ""
+      const modalidade = row[1]?.toLowerCase() || "" // Modalidade em minúsculo para matching
       
-      if (veiculo && tipoMidia) {
+      if (veiculo && modalidade) {
         const parseNumber = (value: string) => {
           if (!value || value === "") return 0
           return Number.parseFloat(value.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
         }
         
-        const key = `${veiculo}_${tipoMidia}`
+        const key = `${veiculo}_${modalidade}`
+        // Tentar encontrar colunas por nome do header primeiro, depois por índice
+        const getValueByHeaderOrIndex = (headerName: string, defaultIndex: number) => {
+          if (headers && Array.isArray(headers)) {
+            const headerIndex = headers.findIndex((h: string) => 
+              h && h.toString().toLowerCase().includes(headerName.toLowerCase())
+            )
+            if (headerIndex >= 0 && row[headerIndex] !== undefined) {
+              return row[headerIndex]
+            }
+          }
+          return row[defaultIndex]
+        }
+        
+        const impressions = parseNumber(getValueByHeaderOrIndex("impress", 4) || "0")
+        const clicks = parseNumber(getValueByHeaderOrIndex("click", 5) || "0")
+        const cpm = parseNumber(getValueByHeaderOrIndex("cpm", 2) || "0")
+        const cpc = parseNumber(getValueByHeaderOrIndex("cpc", 3) || "0")
+        
+        // Calcular custo total: tentar coluna direta, senão calcular a partir de CPM ou CPC
+        let cost = parseNumber(getValueByHeaderOrIndex("cost", 6) || getValueByHeaderOrIndex("spent", 6) || "0")
+        if (cost === 0) {
+          // Calcular a partir de CPM (mais preciso) ou CPC
+          if (impressions > 0 && cpm > 0) {
+            cost = (impressions * cpm) / 1000
+          } else if (clicks > 0 && cpc > 0) {
+            cost = clicks * cpc
+          }
+        }
+        
         benchmarkMap.set(key, {
           veiculo,
-          tipoMidia,
-          cpm: parseNumber(row[2]), // Coluna CPM
-          cpc: parseNumber(row[3]), // Coluna CPC
-          ctr: parseNumber(row[7]), // Coluna CTR
-          vtr: parseNumber(row[8]), // Coluna VTR 100%
-          completionRate: parseNumber(row[8]), // Coluna COMPLETION RATE (mesmo que VTR)
+          modalidade,
+          impressions,
+          clicks,
+          cost,
+          cpm,
+          cpc,
+          ctr: parseNumber(getValueByHeaderOrIndex("ctr", 7) || "0"), // Coluna CTR
+          vtr: parseNumber(getValueByHeaderOrIndex("vtr", 8) || "0"), // Coluna VTR 100%
+          completionRate: parseNumber(getValueByHeaderOrIndex("completion", 8) || "0"), // Coluna COMPLETION RATE
         })
       }
     })

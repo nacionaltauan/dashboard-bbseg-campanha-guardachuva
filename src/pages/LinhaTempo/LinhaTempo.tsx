@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { ResponsiveLine } from "@nivo/line"
 import { Calendar, Filter, TrendingUp, Play, Info, DollarSign, MousePointer, Eye, BarChart3, Target, Percent, MapPin } from "lucide-react"
 import { useConsolidadoNacionalData } from "../../services/api"
+import { useBenchmarkNacionalData, processBenchmarkData } from "../../services/benchmarkApi"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import AnaliseSemanal from "./components/AnaliseSemanal"
 import Loading from "../../components/Loading/Loading"
@@ -49,6 +50,7 @@ interface VehicleEntry {
 const LinhaTempo: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
+  const { data: benchmarkData } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<DataPoint[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
@@ -417,6 +419,126 @@ const LinhaTempo: React.FC = () => {
   const ctr = useMemo(() => (totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0), [totalClicks, totalImpressions])
   const cpm = useMemo(() => (totalImpressions > 0 ? (totalInvestment / totalImpressions) * 1000 : 0), [totalInvestment, totalImpressions])
 
+  // Processar dados de benchmark
+  const benchmarkMap = useMemo(() => {
+    if (benchmarkData?.data) {
+      return processBenchmarkData(benchmarkData.data)
+    }
+    return new Map()
+  }, [benchmarkData])
+
+  // Função para mapear nome do veículo para chave do benchmark
+  const mapVehicleToBenchmarkKey = (vehicle: string): string => {
+    if (vehicle === "Meta") return "META"
+    if (vehicle === "TikTok") return "TIK TOK"
+    return vehicle.toUpperCase()
+  }
+
+  // Calcular benchmark agregado baseado nos filtros
+  const aggregatedBenchmark = useMemo(() => {
+    let totalImpressions = 0
+    let totalClicks = 0
+    let totalCost = 0
+
+    // Se não há filtros, somar todos os benchmarks
+    if (selectedVehicles.length === 0 && selectedModalidades.length === 0) {
+      benchmarkMap.forEach((benchmark) => {
+        totalImpressions += benchmark.impressions || 0
+        totalClicks += benchmark.clicks || 0
+        totalCost += benchmark.cost || 0
+      })
+    } else {
+      // Filtrar benchmarks baseado nos filtros selecionados
+      const vehiclesToUse = selectedVehicles.length > 0 ? selectedVehicles : availableVehicles
+      const modalidadesToUse = selectedModalidades.length > 0 ? selectedModalidades : availableModalidades
+
+      vehiclesToUse.forEach((vehicle) => {
+        const benchmarkKey = mapVehicleToBenchmarkKey(vehicle)
+        
+        modalidadesToUse.forEach((modalidade) => {
+          const key = `${benchmarkKey}_${modalidade.toLowerCase()}`
+          const benchmark = benchmarkMap.get(key)
+          
+          if (benchmark) {
+            totalImpressions += benchmark.impressions || 0
+            totalClicks += benchmark.clicks || 0
+            totalCost += benchmark.cost || 0
+          }
+        })
+      })
+    }
+
+    // Calcular taxas a partir dos totais
+    const benchmarkCPM = totalImpressions > 0 ? (totalCost / totalImpressions) * 1000 : 0
+    const benchmarkCPC = totalClicks > 0 ? totalCost / totalClicks : 0
+    const benchmarkCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+
+    return {
+      impressions: totalImpressions,
+      clicks: totalClicks,
+      cpm: benchmarkCPM,
+      cpc: benchmarkCPC,
+      ctr: benchmarkCTR,
+    }
+  }, [benchmarkMap, selectedVehicles, selectedModalidades, availableVehicles, availableModalidades])
+
+  // Funções para calcular e formatar variações
+  const calculateVariationPercentage = (current: number, benchmark: number): { value: string; color: string } => {
+    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
+    const variation = ((current - benchmark) / benchmark) * 100
+    const isBetter = variation > 0 // Para impressões e cliques, maior é melhor
+    return {
+      value: `${variation >= 0 ? "+" : ""}${variation.toFixed(2)}%`,
+      color: isBetter ? "text-green-600" : "text-red-600"
+    }
+  }
+
+  const calculateVariationCurrency = (current: number, benchmark: number): { value: string; color: string } => {
+    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
+    const difference = current - benchmark
+    const isBetter = difference < 0 // Para custos (CPC, CPM), menor é melhor
+    return {
+      value: `${difference >= 0 ? "+" : ""}${formatCurrency(Math.abs(difference))}`,
+      color: isBetter ? "text-green-600" : "text-red-600"
+    }
+  }
+
+  const calculateVariationPercentagePoints = (current: number, benchmark: number): { value: string; color: string } => {
+    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
+    const difference = current - benchmark
+    const isBetter = difference > 0 // Para taxas (CTR), maior é melhor
+    return {
+      value: `${difference >= 0 ? "+" : ""}${difference.toFixed(2)} p.p.`,
+      color: isBetter ? "text-green-600" : "text-red-600"
+    }
+  }
+
+  // Calcular variações para cada métrica
+  const impressionsVariation = useMemo(() => 
+    calculateVariationPercentage(totalImpressions, aggregatedBenchmark.impressions),
+    [totalImpressions, aggregatedBenchmark.impressions]
+  )
+  
+  const clicksVariation = useMemo(() => 
+    calculateVariationPercentage(totalClicks, aggregatedBenchmark.clicks),
+    [totalClicks, aggregatedBenchmark.clicks]
+  )
+  
+  const cpcVariation = useMemo(() => 
+    calculateVariationCurrency(cpc, aggregatedBenchmark.cpc),
+    [cpc, aggregatedBenchmark.cpc]
+  )
+  
+  const cpmVariation = useMemo(() => 
+    calculateVariationCurrency(cpm, aggregatedBenchmark.cpm),
+    [cpm, aggregatedBenchmark.cpm]
+  )
+  
+  const ctrVariation = useMemo(() => 
+    calculateVariationPercentagePoints(ctr, aggregatedBenchmark.ctr),
+    [ctr, aggregatedBenchmark.ctr]
+  )
+
   // Funções de formatação atualizadas e novas
   const formatCurrency = (value: number): string => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -617,18 +739,28 @@ const LinhaTempo: React.FC = () => {
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg"><Eye className="w-5 h-5 text-blue-600" /></div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">Total de Impressões</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalImpressions)}</p>
+              {impressionsVariation.value !== "-" && (
+                <p className={`text-xs font-medium mt-1 ${impressionsVariation.color}`}>
+                  {impressionsVariation.value} vs benchmark
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg"><MousePointer className="w-5 h-5 text-purple-600" /></div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">Total de Cliques</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalClicks)}</p>
+              {clicksVariation.value !== "-" && (
+                <p className={`text-xs font-medium mt-1 ${clicksVariation.color}`}>
+                  {clicksVariation.value} vs benchmark
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -636,27 +768,42 @@ const LinhaTempo: React.FC = () => {
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg"><MousePointer className="w-5 h-5 text-yellow-600" /></div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CPC</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpc)}</p>
+              {cpcVariation.value !== "-" && (
+                <p className={`text-xs font-medium mt-1 ${cpcVariation.color}`}>
+                  {cpcVariation.value} vs benchmark
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-indigo-100 rounded-lg"><Percent className="w-5 h-5 text-indigo-600" /></div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CTR</p>
               <p className="text-xl font-bold text-gray-900">{formatPercentage(ctr)}</p>
+              {ctrVariation.value !== "-" && (
+                <p className={`text-xs font-medium mt-1 ${ctrVariation.color}`}>
+                  {ctrVariation.value} vs benchmark
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg"><Target className="w-5 h-5 text-red-600" /></div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CPM</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpm)}</p>
+              {cpmVariation.value !== "-" && (
+                <p className={`text-xs font-medium mt-1 ${cpmVariation.color}`}>
+                  {cpmVariation.value} vs benchmark
+                </p>
+              )}
             </div>
           </div>
         </div>

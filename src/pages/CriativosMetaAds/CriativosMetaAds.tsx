@@ -111,15 +111,12 @@ const CriativosMeta: FC = () => {
     return new Map()
   }, [benchmarkData])
 
-  // Função para determinar se é vídeo ou display
-  const getMediaType = (creative: CreativeData): string => {
-    return creative.videoViews > 0 || creative.videoStarts > 0 ? "VÍDEO" : "DISPLAY"
-  }
-
   // Função para obter dados de benchmark
   const getBenchmarkData = (creative: CreativeData) => {
-    const mediaType = getMediaType(creative)
-    const key = `META_${mediaType}`
+    const modalidade = detectModalidadeFromCreative(creative.creativeTitle)
+    if (!modalidade) return null
+    
+    const key = `META_${modalidade}`
     return benchmarkMap.get(key)
   }
 
