@@ -106,8 +106,8 @@ const LinhaTempo: React.FC = () => {
             .replace(",", ".")
             .trim()
           const parsed = Number.parseFloat(cleanValue)
-          // Arredondar para 2 casas decimais para evitar erros de precisão
-          return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+          // Não arredondar aqui - manter precisão completa e arredondar apenas no final
+          return isNaN(parsed) ? 0 : parsed
         }
 
         const parseInteger = (value: string | number) => {
@@ -249,10 +249,13 @@ const LinhaTempo: React.FC = () => {
 
       // Usar arredondamento para evitar erros de precisão em valores monetários
       const totalCostInCents = dayData.reduce((sum, item) => {
-        const cents = Math.round((item.totalSpent || 0) * 100)
+        const value = parseFloat((item.totalSpent || 0).toString())
+        // Multiplicar por 100 e arredondar para evitar imprecisões de ponto flutuante
+        const cents = Math.round(value * 100 + Number.EPSILON)
         return sum + cents
       }, 0)
-      const totalCost = totalCostInCents / 100
+      // Arredondar o resultado final para 2 casas decimais
+      const totalCost = Math.round((totalCostInCents / 100) * 100) / 100
       
       const totalImpressions = dayData.reduce((sum, item) => sum + (item.impressions || 0), 0)
       const totalClicks = dayData.reduce((sum, item) => sum + (item.clicks || 0), 0)
@@ -340,10 +343,15 @@ const LinhaTempo: React.FC = () => {
   // Usar arredondamento para evitar erros de precisão de ponto flutuante em valores monetários
   const totalInvestment = useMemo(() => {
     // Converter para centavos, somar, e converter de volta para reais
+    // Esta abordagem evita erros de precisão de ponto flutuante
     const totalInCents = filteredData.reduce((sum, item) => {
-      const cents = Math.round(item.totalSpent * 100)
+      // Garantir que o valor seja tratado como número e converter para centavos
+      const value = Number(item.totalSpent) || 0
+      // Converter para centavos arredondando para evitar imprecisões
+      const cents = Math.round(value * 100)
       return sum + cents
     }, 0)
+    // Converter de volta para reais - o resultado já está correto em centavos
     return totalInCents / 100
   }, [filteredData])
   const totalImpressions = useMemo(() => filteredData.reduce((sum, item) => sum + item.impressions, 0), [filteredData])
