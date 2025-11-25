@@ -122,23 +122,23 @@ const CriativosTikTok: React.FC = () => {
         date: get("Date"),
         campaignName: get("Campaign name"),
         adGroupName: get("Ad group name"),
-        adName: get("Ad name"),
+        adName: get("Creative title"),
         adText: get("Ad text"),
         videoThumbnailUrl: get("Video thumbnail URL"),
         impressions: parseInteger(get("Impressions")),
         clicks: parseInteger(get("Clicks")),
-        cost: parseNumber(get("Cost")),
+        cost: parseNumber(get("Total spent")),
         cpc: parseNumber(get("CPC")),
         cpm: parseNumber(get("CPM")),
         reach: parseInteger(get("Reach")),
         frequency: parseNumber(get("Frequency")),
-        results: parseInteger(get("Results")),
-        videoViews: parseInteger(get("Video views")),
-        twoSecondVideoViews: parseInteger(get("2-second video views")),
+        results: parseInteger(get("Total engagements") || get("Results")),
+        videoViews: parseInteger(get("Video views ") || get("Video views")),
+        twoSecondVideoViews: parseInteger(get("Video starts") || get("2-second video views")),
         videoViews25: parseInteger(get("Video views at 25%")),
         videoViews50: parseInteger(get("Video views at 50%")),
         videoViews75: parseInteger(get("Video views at 75%")),
-        videoViews100: parseInteger(get("Video views at 100%")),
+        videoViews100: parseInteger(get("Video completions ")),
         profileVisits: parseInteger(get("Profile visits")),
         paidLikes: parseInteger(get("Paid likes")),
         paidComments: parseInteger(get("Paid comments")),
@@ -546,7 +546,7 @@ const CriativosTikTok: React.FC = () => {
         </div>
       </div>
 
-  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="card-overlay rounded-lg shadow-lg p-4 text-center">
           <div className="text-sm text-gray-600 mb-1">Investimento</div>
           <div className="text-lg font-bold text-gray-900">{formatCurrency(totals.investment)}</div>
@@ -575,11 +575,6 @@ const CriativosTikTok: React.FC = () => {
         <div className="card-overlay rounded-lg shadow-lg p-4 text-center">
           <div className="text-sm text-gray-600 mb-1">CTR</div>
           <div className="text-lg font-bold text-gray-900">{totals.ctr.toFixed(2)}%</div>
-        </div>
-
-        <div className="card-overlay rounded-lg shadow-lg p-4 text-center">
-          <div className="text-sm text-gray-600 mb-1">Frequência</div>
-          <div className="text-lg font-bold text-gray-900">{totals.avgFrequency.toFixed(2)}</div>
         </div>
 
         <div className="card-overlay rounded-lg shadow-lg p-4 text-center">

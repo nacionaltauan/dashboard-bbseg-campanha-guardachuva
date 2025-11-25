@@ -376,7 +376,7 @@ const Alcance: React.FC = () => {
             ? alcanceTotals.meta.frequency 
             : (alcanceTotals.meta.reach > 0 ? alcanceTotals.meta.impressions / alcanceTotals.meta.reach : 0)
         } else {
-          metric.frequency = metric.reach > 0 ? metric.impressions / metric.reach : 0
+        metric.frequency = metric.reach > 0 ? metric.impressions / metric.reach : 0
         }
         
         metric.cpv = metric.visualizacoes100 > 0 ? metric.cost / metric.visualizacoes100 : 0

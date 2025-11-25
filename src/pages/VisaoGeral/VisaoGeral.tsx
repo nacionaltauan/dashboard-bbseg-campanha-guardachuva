@@ -485,9 +485,9 @@ const VisaoGeral: React.FC = () => {
         }
       } else {
         return {
-          platform: metric.platform,
-          value: metric.reach,
-          color: metric.color,
+    platform: metric.platform,
+    value: metric.reach,
+    color: metric.color,
         }
       }
     })
@@ -516,9 +516,9 @@ const VisaoGeral: React.FC = () => {
         }
       } else {
         return {
-          platform: metric.platform,
-          value: metric.frequency,
-          color: metric.color,
+    platform: metric.platform,
+    value: metric.frequency,
+    color: metric.color,
         }
       }
     })
