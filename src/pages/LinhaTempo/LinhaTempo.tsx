@@ -245,11 +245,29 @@ const LinhaTempo: React.FC = () => {
         return sum + Math.round(value * 100)
       }, 0) / 100
       
+      // Coletar todos os valores para análise detalhada
+      const allValues = processed.map((item, index) => ({
+        index,
+        original: dataAsObjects[index]?.["Total spent"],
+        parsed: item.totalSpent,
+        cents: Math.round(item.totalSpent * 100)
+      }))
+      
+      // Encontrar valores que podem estar causando o problema
+      const suspiciousValues = allValues.filter(v => {
+        const originalStr = String(v.original || '')
+        // Valores que podem ter problemas de parse
+        return originalStr.includes(',') || originalStr.includes('.') || v.parsed > 0
+      })
+      
       console.log('=== PROCESSAMENTO DE DADOS DEBUG ===')
       console.log('Total de linhas processadas:', processed.length)
       console.log('Total de investimento (antes de filtros):', totalBeforeFilter)
       console.log('Esperado da planilha: 36193.36')
       console.log('Diferença:', Math.abs(totalBeforeFilter - 36193.36))
+      console.log('Primeiros 10 valores processados:', suspiciousValues.slice(0, 10))
+      console.log('Últimos 10 valores processados:', suspiciousValues.slice(-10))
+      console.log('Todos os valores (para análise):', allValues)
       console.log('====================================')
       
       setProcessedData(processed)
