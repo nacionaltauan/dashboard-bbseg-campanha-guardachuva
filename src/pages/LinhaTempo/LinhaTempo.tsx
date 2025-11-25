@@ -154,16 +154,33 @@ const LinhaTempo: React.FC = () => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
 
-      const dataAsObjects = rows
-        .filter((row: any[]) => {
-          // Filtrar linhas completamente vazias
-          return row && row.some((cell: any) => cell !== null && cell !== undefined && cell !== "")
-        })
-        .map((row: any[]) => {
+      // Encontrar o índice exato da coluna "Total spent" (índice 6)
+      const totalSpentColIndex = header.findIndex((h: string) => 
+        h && h.trim().toLowerCase() === "total spent"
+      )
+      
+      console.log('=== DEBUG COLUNA TOTAL SPENT ===')
+      console.log('Índice da coluna "Total spent":', totalSpentColIndex)
+      if (totalSpentColIndex >= 0 && rows.length > 0) {
+        console.log('Nome exato da coluna:', header[totalSpentColIndex])
+        console.log('Primeiro valor da coluna:', rows[0]?.[totalSpentColIndex])
+      }
+      console.log('================================')
+
+      // Filtrar linhas vazias ANTES de criar os objetos
+      const filteredRows = rows.filter((row: any[]) => {
+        return row && row.some((cell: any) => cell !== null && cell !== undefined && cell !== "")
+      })
+
+      const dataAsObjects = filteredRows.map((row: any[], rowIndex: number) => {
         const obj: { [key: string]: any } = {}
         header.forEach((key: string, index: number) => {
           obj[key] = row[index]
         })
+        // Armazenar o índice da linha e os dados originais para acessar diretamente
+        obj["__rowIndex"] = rowIndex
+        obj["__rowData"] = row
+        obj["__totalSpentColIndex"] = totalSpentColIndex
         return obj
       })
 
@@ -184,10 +201,51 @@ const LinhaTempo: React.FC = () => {
         const impressions = item["Impressions"]
         const clicks = item["Clicks"]
         
-        // Ler a coluna pelo nome (tentar variações)
-        const totalSpentValue = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"] || item["Total spent "] || item["Total Spent "]
+        // Ler a coluna usando o índice encontrado (mais confiável)
+        // Usar diretamente do array original usando o índice armazenado
+        const colIndex = item["__totalSpentColIndex"]
+        let totalSpentValue: any = null
         
-        const totalSpent = parseNumber(totalSpentValue)
+        if (colIndex >= 0 && item["__rowData"]) {
+          // Usar o array original diretamente pelo índice da coluna (índice 6)
+          totalSpentValue = item["__rowData"][colIndex]
+        } else {
+          // Fallback: tentar pelo nome
+          totalSpentValue = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"]
+        }
+        
+        // Parsear o valor CORRETAMENTE do original da planilha
+        // Esta é a mesma lógica que funciona no reparsed
+        let totalSpent = 0
+        if (totalSpentValue) {
+          const stringValue = totalSpentValue.toString().trim()
+          if (stringValue && stringValue !== "" && stringValue !== "-" && stringValue !== "N/A") {
+            let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
+            
+            if (cleanValue.includes(",")) {
+              const commaCount = (cleanValue.match(/,/g) || []).length
+              if (commaCount === 1) {
+                // Uma vírgula - formato brasileiro decimal (ex: 293,79)
+                cleanValue = cleanValue.replace(/\./g, "") // Remove separadores de milhar
+                cleanValue = cleanValue.replace(",", ".") // Converte vírgula para ponto
+              } else {
+                // Múltiplas vírgulas
+                cleanValue = cleanValue.replace(/,/g, "")
+              }
+            } else if (cleanValue.includes(".")) {
+              const parts = cleanValue.split(".")
+              if (parts.length === 2 && parts[1].length <= 2) {
+                // Decimal (ex: 1234.56) - manter como está
+              } else {
+                // Separador de milhar (ex: 1.234.567)
+                cleanValue = cleanValue.replace(/\./g, "")
+              }
+            }
+            
+            const parsed = Number.parseFloat(cleanValue)
+            totalSpent = isNaN(parsed) ? 0 : parsed
+          }
+        }
         const videoViews = item["Video views "]
         const videoViews25 = item["Video views at 25%"]
         const videoViews50 = item["Video views at 50%"]
