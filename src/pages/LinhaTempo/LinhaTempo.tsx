@@ -495,62 +495,23 @@ const LinhaTempo: React.FC = () => {
     }
   }, [benchmarkMap, selectedVehicles, selectedModalidades, availableVehicles, availableModalidades])
 
-  // Funções para calcular e formatar variações
-  const calculateVariationPercentage = (current: number, benchmark: number): { value: string; color: string } => {
-    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
-    const variation = ((current - benchmark) / benchmark) * 100
-    const isBetter = variation > 0 // Para impressões e cliques, maior é melhor
-    return {
-      value: `${variation >= 0 ? "+" : ""}${variation.toFixed(2)}%`,
-      color: isBetter ? "text-green-600" : "text-red-600"
+  // Função para formatar valores de benchmark
+  const formatBenchmarkValue = (value: number, type: 'number' | 'currency' | 'percentage'): string => {
+    // Verificar se há dados de benchmark disponíveis
+    if (benchmarkMap.size === 0) return "N/A"
+    if (isNaN(value) || !isFinite(value)) return "N/A"
+    // Para valores numéricos, 0 pode ser válido, então só verificamos NaN/Infinity
+    // Para taxas e custos, 0 pode indicar ausência de dados
+    if (type !== 'number' && value === 0) return "N/A"
+    
+    if (type === 'currency') {
+      return formatCurrency(value)
+    } else if (type === 'percentage') {
+      return formatPercentage(value)
+    } else {
+      return formatFullNumber(value)
     }
   }
-
-  const calculateVariationCurrency = (current: number, benchmark: number): { value: string; color: string } => {
-    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
-    const difference = current - benchmark
-    const isBetter = difference < 0 // Para custos (CPC, CPM), menor é melhor
-    return {
-      value: `${difference >= 0 ? "+" : ""}${formatCurrency(Math.abs(difference))}`,
-      color: isBetter ? "text-green-600" : "text-red-600"
-    }
-  }
-
-  const calculateVariationPercentagePoints = (current: number, benchmark: number): { value: string; color: string } => {
-    if (benchmark === 0) return { value: "-", color: "text-gray-500" }
-    const difference = current - benchmark
-    const isBetter = difference > 0 // Para taxas (CTR), maior é melhor
-    return {
-      value: `${difference >= 0 ? "+" : ""}${difference.toFixed(2)} p.p.`,
-      color: isBetter ? "text-green-600" : "text-red-600"
-    }
-  }
-
-  // Calcular variações para cada métrica
-  const impressionsVariation = useMemo(() => 
-    calculateVariationPercentage(totalImpressions, aggregatedBenchmark.impressions),
-    [totalImpressions, aggregatedBenchmark.impressions]
-  )
-  
-  const clicksVariation = useMemo(() => 
-    calculateVariationPercentage(totalClicks, aggregatedBenchmark.clicks),
-    [totalClicks, aggregatedBenchmark.clicks]
-  )
-  
-  const cpcVariation = useMemo(() => 
-    calculateVariationCurrency(cpc, aggregatedBenchmark.cpc),
-    [cpc, aggregatedBenchmark.cpc]
-  )
-  
-  const cpmVariation = useMemo(() => 
-    calculateVariationCurrency(cpm, aggregatedBenchmark.cpm),
-    [cpm, aggregatedBenchmark.cpm]
-  )
-  
-  const ctrVariation = useMemo(() => 
-    calculateVariationPercentagePoints(ctr, aggregatedBenchmark.ctr),
-    [ctr, aggregatedBenchmark.ctr]
-  )
   
   // Função para formatar valores do eixo Y e tooltip
   const formatChartValue = (value: number): string => {
@@ -742,11 +703,9 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">Total de Impressões</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalImpressions)}</p>
-              {impressionsVariation.value !== "-" && (
-                <p className={`text-xs font-medium mt-1 ${impressionsVariation.color}`}>
-                  {impressionsVariation.value} vs benchmark
-                </p>
-              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {formatBenchmarkValue(aggregatedBenchmark.impressions, 'number')}
+              </p>
             </div>
           </div>
         </div>
@@ -756,11 +715,9 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">Total de Cliques</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalClicks)}</p>
-              {clicksVariation.value !== "-" && (
-                <p className={`text-xs font-medium mt-1 ${clicksVariation.color}`}>
-                  {clicksVariation.value} vs benchmark
-                </p>
-              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {formatBenchmarkValue(aggregatedBenchmark.clicks, 'number')}
+              </p>
             </div>
           </div>
         </div>
@@ -771,11 +728,9 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CPC</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpc)}</p>
-              {cpcVariation.value !== "-" && (
-                <p className={`text-xs font-medium mt-1 ${cpcVariation.color}`}>
-                  {cpcVariation.value} vs benchmark
-                </p>
-              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {formatBenchmarkValue(aggregatedBenchmark.cpc, 'currency')}
+              </p>
             </div>
           </div>
         </div>
@@ -785,11 +740,9 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CTR</p>
               <p className="text-xl font-bold text-gray-900">{formatPercentage(ctr)}</p>
-              {ctrVariation.value !== "-" && (
-                <p className={`text-xs font-medium mt-1 ${ctrVariation.color}`}>
-                  {ctrVariation.value} vs benchmark
-                </p>
-              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {formatBenchmarkValue(aggregatedBenchmark.ctr, 'percentage')}
+              </p>
             </div>
           </div>
         </div>
@@ -799,11 +752,9 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-gray-600">CPM</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpm)}</p>
-              {cpmVariation.value !== "-" && (
-                <p className={`text-xs font-medium mt-1 ${cpmVariation.color}`}>
-                  {cpmVariation.value} vs benchmark
-                </p>
-              )}
+              <p className="text-xs text-blue-600 mt-1">
+                {formatBenchmarkValue(aggregatedBenchmark.cpm, 'currency')}
+              </p>
             </div>
           </div>
         </div>
