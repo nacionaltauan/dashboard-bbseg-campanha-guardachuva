@@ -246,28 +246,72 @@ const LinhaTempo: React.FC = () => {
       }, 0) / 100
       
       // Coletar todos os valores para análise detalhada
-      const allValues = processed.map((item, index) => ({
-        index,
-        original: dataAsObjects[index]?.["Total spent"],
-        parsed: item.totalSpent,
-        cents: Math.round(item.totalSpent * 100)
-      }))
-      
-      // Encontrar valores que podem estar causando o problema
-      const suspiciousValues = allValues.filter(v => {
-        const originalStr = String(v.original || '')
-        // Valores que podem ter problemas de parse
-        return originalStr.includes(',') || originalStr.includes('.') || v.parsed > 0
+      const allValues = processed.map((item, index) => {
+        const original = dataAsObjects[index]?.["Total spent"]
+        const parsed = item.totalSpent
+        const cents = Math.round(parsed * 100)
+        
+        // Tentar re-parsear o valor original para comparar
+        let reParsed = 0
+        if (original) {
+          const stringValue = original.toString().trim()
+          if (stringValue) {
+            let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
+            if (cleanValue.includes(",")) {
+              const commaCount = (cleanValue.match(/,/g) || []).length
+              if (commaCount === 1) {
+                cleanValue = cleanValue.replace(/\./g, "")
+                cleanValue = cleanValue.replace(",", ".")
+              } else {
+                cleanValue = cleanValue.replace(/,/g, "")
+              }
+            } else if (cleanValue.includes(".")) {
+              const parts = cleanValue.split(".")
+              if (parts.length === 2 && parts[1].length <= 2) {
+                // Decimal
+              } else {
+                cleanValue = cleanValue.replace(/\./g, "")
+              }
+            }
+            reParsed = Number.parseFloat(cleanValue) || 0
+          }
+        }
+        
+        return {
+          index,
+          original,
+          parsed,
+          reParsed,
+          cents,
+          difference: Math.abs(parsed - reParsed)
+        }
       })
+      
+      // Encontrar valores com diferença no re-parse
+      const problematicValues = allValues.filter(v => v.difference > 0.001)
+      
+      // Calcular soma esperada (re-parseando todos os valores)
+      const expectedTotal = allValues.reduce((sum, v) => {
+        return sum + Math.round((v.reParsed || v.parsed) * 100)
+      }, 0) / 100
       
       console.log('=== PROCESSAMENTO DE DADOS DEBUG ===')
       console.log('Total de linhas processadas:', processed.length)
       console.log('Total de investimento (antes de filtros):', totalBeforeFilter)
+      console.log('Total esperado (re-parseado):', expectedTotal)
       console.log('Esperado da planilha: 36193.36')
-      console.log('Diferença:', Math.abs(totalBeforeFilter - 36193.36))
-      console.log('Primeiros 10 valores processados:', suspiciousValues.slice(0, 10))
-      console.log('Últimos 10 valores processados:', suspiciousValues.slice(-10))
-      console.log('Todos os valores (para análise):', allValues)
+      console.log('Diferença calculada:', Math.abs(totalBeforeFilter - 36193.36))
+      console.log('Diferença do esperado:', Math.abs(expectedTotal - 36193.36))
+      console.log('Valores com diferença no parse:', problematicValues.length)
+      if (problematicValues.length > 0) {
+        console.log('Primeiros valores problemáticos:', problematicValues.slice(0, 5))
+      }
+      console.log('Primeiros 10 valores:', allValues.slice(0, 10).map(v => ({
+        original: v.original,
+        parsed: v.parsed,
+        reParsed: v.reParsed,
+        diff: v.difference
+      })))
       console.log('====================================')
       
       setProcessedData(processed)
