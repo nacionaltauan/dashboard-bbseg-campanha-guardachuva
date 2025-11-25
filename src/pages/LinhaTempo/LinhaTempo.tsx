@@ -434,6 +434,19 @@ const LinhaTempo: React.FC = () => {
     return vehicle.toUpperCase()
   }
 
+  // Funções de formatação (definidas antes para serem usadas nas funções de variação)
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const formatFullNumber = (value: number): string => {
+    return value.toLocaleString("pt-BR")
+  }
+
+  const formatPercentage = (value: number): string => {
+    return `${value.toFixed(2).replace(".", ",")}%`
+  }
+
   // Calcular benchmark agregado baseado nos filtros
   const aggregatedBenchmark = useMemo(() => {
     let totalImpressions = 0
@@ -538,19 +551,6 @@ const LinhaTempo: React.FC = () => {
     calculateVariationPercentagePoints(ctr, aggregatedBenchmark.ctr),
     [ctr, aggregatedBenchmark.ctr]
   )
-
-  // Funções de formatação atualizadas e novas
-  const formatCurrency = (value: number): string => {
-    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  }
-
-  const formatFullNumber = (value: number): string => {
-    return value.toLocaleString("pt-BR")
-  }
-
-  const formatPercentage = (value: number): string => {
-    return `${value.toFixed(2).replace(".", ",")}%`
-  }
   
   // Função para formatar valores do eixo Y e tooltip
   const formatChartValue = (value: number): string => {
