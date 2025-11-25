@@ -84,6 +84,72 @@ const LinhaTempo: React.FC = () => {
     return new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
   }
 
+  // Funções auxiliares de parse (movidas para fora do map para evitar problemas de escopo)
+  const parseNumber = (value: string | number) => {
+    if (!value || value === "" || value === null || value === undefined) return 0
+    
+    // Se já é um número, retornar diretamente (sem arredondar)
+    if (typeof value === 'number') {
+      return isNaN(value) || !isFinite(value) ? 0 : value
+    }
+    
+    const stringValue = value.toString().trim()
+    if (stringValue === "" || stringValue === "-" || stringValue === "N/A") return 0
+    
+    // Remover R$ e espaços
+    let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
+    
+    // Se não tem vírgula nem ponto, pode ser um número inteiro
+    if (!cleanValue.includes(",") && !cleanValue.includes(".")) {
+      const parsed = Number.parseFloat(cleanValue)
+      return isNaN(parsed) ? 0 : parsed
+    }
+    
+    // Remover pontos (separadores de milhar) - mas preservar a vírgula decimal
+    if (cleanValue.includes(",")) {
+      const commaCount = (cleanValue.match(/,/g) || []).length
+      if (commaCount === 1) {
+        cleanValue = cleanValue.replace(/\./g, "")
+        cleanValue = cleanValue.replace(",", ".")
+      } else {
+        cleanValue = cleanValue.replace(/,/g, "")
+      }
+    } else if (cleanValue.includes(".")) {
+      const parts = cleanValue.split(".")
+      if (parts.length === 2 && parts[1].length <= 2) {
+        // Decimal - não fazer nada
+      } else {
+        cleanValue = cleanValue.replace(/\./g, "")
+      }
+    }
+    
+    const parsed = Number.parseFloat(cleanValue)
+    if (isNaN(parsed)) return 0
+    
+    const decimalPlaces = (parsed.toString().split('.')[1] || '').length
+    if (decimalPlaces > 2) {
+      return Math.round(parsed * 100) / 100
+    }
+    
+    return parsed
+  }
+
+  const parseInteger = (value: string | number) => {
+    if (!value) return 0
+    const stringValue = value.toString()
+    const cleanValue = stringValue.replace(/\./g, "").trim()
+    const parsed = Number.parseInt(cleanValue)
+    return isNaN(parsed) ? 0 : parsed
+  }
+
+  const parseDate = (dateStr: string) => {
+    if (!dateStr) return ""
+    const parts = dateStr.split("/")
+    if (parts.length !== 3) return ""
+    const [day, month, year] = parts
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+  }
+
   useEffect(() => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
@@ -101,100 +167,14 @@ const LinhaTempo: React.FC = () => {
         return obj
       })
 
-      const processed: DataPoint[] = dataAsObjects
-        .filter((item: any) => {
-          // Filtrar linhas vazias ou sem data válida
-          const date = item["Date"]
-          return date && date.toString().trim() !== ""
-        })
-        .map((item: any) => {
-        const parseNumber = (value: string | number) => {
-          if (!value || value === "" || value === null || value === undefined) return 0
-          
-          // Se já é um número, retornar diretamente (sem arredondar)
-          if (typeof value === 'number') {
-            return isNaN(value) || !isFinite(value) ? 0 : value
-          }
-          
-          const stringValue = value.toString().trim()
-          if (stringValue === "" || stringValue === "-" || stringValue === "N/A") return 0
-          
-          // Remover R$ e espaços
-          let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
-          
-          // Se não tem vírgula nem ponto, pode ser um número inteiro
-          if (!cleanValue.includes(",") && !cleanValue.includes(".")) {
-            const parsed = Number.parseFloat(cleanValue)
-            return isNaN(parsed) ? 0 : parsed
-          }
-          
-          // Remover pontos (separadores de milhar) - mas preservar a vírgula decimal
-          // Primeiro, verificar se há vírgula (formato brasileiro)
-          if (cleanValue.includes(",")) {
-            // Formato brasileiro: 1.234,56 ou 293,79
-            // Contar quantas vírgulas existem
-            const commaCount = (cleanValue.match(/,/g) || []).length
-            if (commaCount === 1) {
-              // Uma vírgula - provavelmente é decimal
-              cleanValue = cleanValue.replace(/\./g, "") // Remove separadores de milhar
-              cleanValue = cleanValue.replace(",", ".") // Converte vírgula para ponto
-            } else {
-              // Múltiplas vírgulas - tratar como separador
-              cleanValue = cleanValue.replace(/,/g, "")
-            }
-          } else if (cleanValue.includes(".")) {
-            // Formato internacional: 1234.56 - verificar se é decimal ou separador de milhar
-            const parts = cleanValue.split(".")
-            if (parts.length === 2 && parts[1].length <= 2) {
-              // Provavelmente é decimal (ex: 1234.56)
-              // Não fazer nada, já está no formato correto
-            } else {
-              // Provavelmente é separador de milhar (ex: 1.234.567)
-              cleanValue = cleanValue.replace(/\./g, "")
-            }
-          }
-          
-          const parsed = Number.parseFloat(cleanValue)
-          if (isNaN(parsed)) return 0
-          
-          // Se o valor tem mais de 2 casas decimais, pode ser um problema de parse
-          // Vamos garantir que valores monetários tenham no máximo 2 casas decimais
-          // Mas fazer isso de forma precisa para não perder informação
-          const decimalPlaces = (parsed.toString().split('.')[1] || '').length
-          if (decimalPlaces > 2) {
-            // Se tem mais de 2 casas, pode ser um erro de parse
-            // Vamos arredondar para 2 casas usando uma abordagem precisa
-            const rounded = Math.round(parsed * 100) / 100
-            // Debug: logar valores com mais de 2 casas decimais
-            if (process.env.NODE_ENV === 'development' && Math.abs(parsed - rounded) > 0.001) {
-              console.warn('Valor com mais de 2 casas decimais parseado:', {
-                original: stringValue,
-                parsed,
-                rounded,
-                difference: parsed - rounded
-              })
-            }
-            return rounded
-          }
-          
-          return parsed
-        }
-
-        const parseInteger = (value: string | number) => {
-          if (!value) return 0
-          const stringValue = value.toString()
-          const cleanValue = stringValue.replace(/\./g, "").trim()
-          const parsed = Number.parseInt(cleanValue)
-          return isNaN(parsed) ? 0 : parsed
-        }
-
-        const parseDate = (dateStr: string) => {
-          if (!dateStr) return ""
-          const parts = dateStr.split("/")
-          if (parts.length !== 3) return ""
-          const [day, month, year] = parts
-          return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
-        }
+      // Primeiro filtrar, depois processar
+      const filteredData = dataAsObjects.filter((item: any) => {
+        // Filtrar linhas vazias ou sem data válida
+        const date = item["Date"]
+        return date && date.toString().trim() !== ""
+      })
+      
+      const processed: DataPoint[] = filteredData.map((item: any) => {
 
         const date = item["Date"]
         const campaignName = item["Campaign name"]
