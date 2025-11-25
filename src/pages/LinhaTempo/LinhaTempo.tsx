@@ -88,6 +88,17 @@ const LinhaTempo: React.FC = () => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
 
+      // Encontrar o índice correto da coluna "Total spent"
+      const totalSpentHeaderIndex = header.findIndex((h: string) => 
+        h && h.trim().toLowerCase() === "total spent"
+      )
+      
+      console.log('Header Total Spent Index:', totalSpentHeaderIndex)
+      console.log('Header completo:', header)
+      if (totalSpentHeaderIndex >= 0) {
+        console.log('Nome da coluna encontrada:', header[totalSpentHeaderIndex])
+      }
+
       const dataAsObjects = rows
         .filter((row: any[]) => {
           // Filtrar linhas completamente vazias
@@ -98,6 +109,11 @@ const LinhaTempo: React.FC = () => {
         header.forEach((key: string, index: number) => {
           obj[key] = row[index]
         })
+        // Adicionar o índice da coluna Total spent para debug
+        if (totalSpentHeaderIndex >= 0) {
+          obj["__totalSpentIndex"] = totalSpentHeaderIndex
+          obj["__totalSpentValue"] = row[totalSpentHeaderIndex]
+        }
         return obj
       })
 
@@ -204,18 +220,20 @@ const LinhaTempo: React.FC = () => {
         const impressions = item["Impressions"]
         const clicks = item["Clicks"]
         
-        // Verificar todas as possíveis variações do nome da coluna
-        const totalSpentRaw = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"] || item["Total Spent "] || item["Total spent "]
+        // Usar o valor correto da coluna Total spent usando o índice
+        // Se o índice foi armazenado no objeto, usar o valor direto
+        const totalSpentValue = item["__totalSpentValue"] !== undefined 
+          ? item["__totalSpentValue"] 
+          : (item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"])
         
-        // Se não encontrou, tentar encontrar pelo índice (geralmente é a coluna 6 ou 7)
-        let totalSpentValue = totalSpentRaw
-        if (!totalSpentValue) {
-          const totalSpentIndex = header.findIndex((h: string) => 
-            h && (h.toLowerCase().includes("total") && h.toLowerCase().includes("spent"))
-          )
-          if (totalSpentIndex >= 0) {
-            totalSpentValue = item[header[totalSpentIndex]]
-          }
+        // Debug para os primeiros valores
+        if (processed.length < 3) {
+          console.log('Total Spent Debug:', {
+            headerIndex: item["__totalSpentIndex"],
+            rawValue: totalSpentValue,
+            itemTotalSpent: item["Total spent"],
+            allKeys: Object.keys(item).filter(k => !k.startsWith('__'))
+          })
         }
         
         const totalSpent = parseNumber(totalSpentValue)
