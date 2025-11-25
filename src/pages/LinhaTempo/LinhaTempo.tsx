@@ -154,33 +154,16 @@ const LinhaTempo: React.FC = () => {
     if (apiData && apiData.data && Array.isArray(apiData.data.values) && apiData.data.values.length > 1) {
       const [header, ...rows] = apiData.data.values
 
-      // Encontrar o índice exato da coluna "Total spent" (índice 6)
-      const totalSpentColIndex = header.findIndex((h: string) => 
-        h && h.trim().toLowerCase() === "total spent"
-      )
-      
-      console.log('=== DEBUG COLUNA TOTAL SPENT ===')
-      console.log('Índice da coluna "Total spent":', totalSpentColIndex)
-      if (totalSpentColIndex >= 0 && rows.length > 0) {
-        console.log('Nome exato da coluna:', header[totalSpentColIndex])
-        console.log('Primeiro valor da coluna:', rows[0]?.[totalSpentColIndex])
-      }
-      console.log('================================')
-
-      // Filtrar linhas vazias ANTES de criar os objetos
-      const filteredRows = rows.filter((row: any[]) => {
-        return row && row.some((cell: any) => cell !== null && cell !== undefined && cell !== "")
-      })
-
-      const dataAsObjects = filteredRows.map((row: any[], rowIndex: number) => {
+      const dataAsObjects = rows
+        .filter((row: any[]) => {
+          // Filtrar linhas completamente vazias
+          return row && row.some((cell: any) => cell !== null && cell !== undefined && cell !== "")
+        })
+        .map((row: any[]) => {
         const obj: { [key: string]: any } = {}
         header.forEach((key: string, index: number) => {
           obj[key] = row[index]
         })
-        // Armazenar o índice da linha e os dados originais para acessar diretamente
-        obj["__rowIndex"] = rowIndex
-        obj["__rowData"] = row
-        obj["__totalSpentColIndex"] = totalSpentColIndex
         return obj
       })
 
@@ -201,51 +184,9 @@ const LinhaTempo: React.FC = () => {
         const impressions = item["Impressions"]
         const clicks = item["Clicks"]
         
-        // Ler a coluna usando o índice encontrado (mais confiável)
-        // Usar diretamente do array original usando o índice armazenado
-        const colIndex = item["__totalSpentColIndex"]
-        let totalSpentValue: any = null
-        
-        if (colIndex >= 0 && item["__rowData"]) {
-          // Usar o array original diretamente pelo índice da coluna (índice 6)
-          totalSpentValue = item["__rowData"][colIndex]
-        } else {
-          // Fallback: tentar pelo nome
-          totalSpentValue = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"]
-        }
-        
-        // Parsear o valor CORRETAMENTE do original da planilha
-        // Esta é a mesma lógica que funciona no reparsed
-        let totalSpent = 0
-        if (totalSpentValue) {
-          const stringValue = totalSpentValue.toString().trim()
-          if (stringValue && stringValue !== "" && stringValue !== "-" && stringValue !== "N/A") {
-            let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
-            
-            if (cleanValue.includes(",")) {
-              const commaCount = (cleanValue.match(/,/g) || []).length
-              if (commaCount === 1) {
-                // Uma vírgula - formato brasileiro decimal (ex: 293,79)
-                cleanValue = cleanValue.replace(/\./g, "") // Remove separadores de milhar
-                cleanValue = cleanValue.replace(",", ".") // Converte vírgula para ponto
-              } else {
-                // Múltiplas vírgulas
-                cleanValue = cleanValue.replace(/,/g, "")
-              }
-            } else if (cleanValue.includes(".")) {
-              const parts = cleanValue.split(".")
-              if (parts.length === 2 && parts[1].length <= 2) {
-                // Decimal (ex: 1234.56) - manter como está
-              } else {
-                // Separador de milhar (ex: 1.234.567)
-                cleanValue = cleanValue.replace(/\./g, "")
-              }
-            }
-            
-            const parsed = Number.parseFloat(cleanValue)
-            totalSpent = isNaN(parsed) ? 0 : parsed
-          }
-        }
+        // Ler a coluna pelo nome
+        const totalSpentValue = item["Total spent"] || item["Total Spent"] || item["total spent"] || item["TOTAL SPENT"]
+        const totalSpent = parseNumber(totalSpentValue)
         const videoViews = item["Video views "]
         const videoViews25 = item["Video views at 25%"]
         const videoViews50 = item["Video views at 50%"]
@@ -280,115 +221,6 @@ const LinhaTempo: React.FC = () => {
         })
 
       processed.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      
-      // Debug: verificar se há duplicação ou problemas
-      const totalBeforeFilter = processed.reduce((sum, item) => {
-        const value = Number(item.totalSpent) || 0
-        return sum + Math.round(value * 100)
-      }, 0) / 100
-      
-      // Coletar TODOS os valores para análise detalhada
-      // parsed = valor que está sendo usado atualmente (pode estar errado se pegou coluna errada)
-      // reparsed = valor re-parseado do valor original da planilha (correto)
-      const allValues = processed.map((item, processedIndex) => {
-        // Encontrar o item original em dataAsObjects usando os campos únicos
-        const originalItem = dataAsObjects.find((orig: any) => 
-          orig["Date"] === item.date.split("-").reverse().join("/") && 
-          orig["Campaign name"] === item.campaignName &&
-          orig["Creative title"] === item.creativeTitle
-        ) || dataAsObjects[processedIndex] // Fallback para índice se não encontrar
-        
-        const original = originalItem?.["Total spent"] || originalItem?.["Total Spent"] || originalItem?.["total spent"]
-        const parsed = item.totalSpent // Valor atual sendo usado (pode estar errado)
-        
-        // Re-parsear o valor original da planilha para comparar (este é o correto)
-        let reParsed = 0
-        if (original) {
-          const stringValue = original.toString().trim()
-          if (stringValue) {
-            let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
-            if (cleanValue.includes(",")) {
-              const commaCount = (cleanValue.match(/,/g) || []).length
-              if (commaCount === 1) {
-                cleanValue = cleanValue.replace(/\./g, "")
-                cleanValue = cleanValue.replace(",", ".")
-              } else {
-                cleanValue = cleanValue.replace(/,/g, "")
-              }
-            } else if (cleanValue.includes(".")) {
-              const parts = cleanValue.split(".")
-              if (parts.length === 2 && parts[1].length <= 2) {
-                // Decimal
-              } else {
-                cleanValue = cleanValue.replace(/\./g, "")
-              }
-            }
-            reParsed = Number.parseFloat(cleanValue) || 0
-          }
-        }
-        
-        // Coletar TODOS os valores do item para ver qual coluna está sendo lida
-        const allItemValues: Record<string, any> = {}
-        if (originalItem) {
-          header.forEach((key: string) => {
-            allItemValues[key] = originalItem[key]
-          })
-        }
-        
-        return {
-          linha: processedIndex + 1,
-          original: original, // Valor original da coluna "Total spent" na planilha
-          parsed: parsed, // Valor que está sendo usado (pode estar errado - pegando outra coluna)
-          reparsed: reParsed, // Valor re-parseado do original (correto)
-          diferenca: Math.abs(parsed - reParsed), // Diferença entre parsed e reparsed
-          todasColunas: allItemValues // Todas as colunas para identificar qual está sendo lida errado
-        }
-      })
-      
-      // Calcular totais
-      const totalParsed = allValues.reduce((sum, v) => sum + Math.round(v.parsed * 100), 0) / 100
-      const totalReparsed = allValues.reduce((sum, v) => sum + Math.round(v.reparsed * 100), 0) / 100
-      
-      console.log('=== ANÁLISE COMPLETA DE TODAS AS LINHAS ===')
-      console.log('EXPLICAÇÃO:')
-      console.log('- parsed: valor que está sendo usado atualmente (pode estar errado se pegou coluna errada)')
-      console.log('- reparsed: valor re-parseado do valor original da planilha (correto)')
-      console.log('- diferenca: diferença entre parsed e reparsed')
-      console.log('')
-      console.log('RESUMO:')
-      console.log('Total de linhas:', processed.length)
-      console.log('Total usando PARSED (atual - pode estar errado):', totalParsed)
-      console.log('Total usando REPARSED (correto):', totalReparsed)
-      console.log('Esperado da planilha: 36193.36')
-      console.log('Diferença do esperado (parsed):', Math.abs(totalParsed - 36193.36))
-      console.log('Diferença do esperado (reparsed):', Math.abs(totalReparsed - 36193.36))
-      console.log('')
-      console.log('=== TODAS AS LINHAS (para análise) ===')
-      console.log('Formato: {linha, original, parsed, reparsed, diferenca, todasColunas}')
-      console.log('')
-      allValues.forEach((v, idx) => {
-        if (v.diferenca > 0.01) { // Mostrar apenas linhas com diferença significativa
-          console.log(`Linha ${v.linha}:`, {
-            original: v.original,
-            parsed: v.parsed,
-            reparsed: v.reparsed,
-            diferenca: v.diferenca.toFixed(2),
-            // Mostrar apenas algumas colunas relevantes para identificar o problema
-            colunas: {
-              'Date': v.todasColunas['Date'],
-              'Total spent': v.todasColunas['Total spent'],
-              'Impressions': v.todasColunas['Impressions'],
-              'Clicks': v.todasColunas['Clicks'],
-              'Reach': v.todasColunas['Reach']
-            }
-          })
-        }
-      })
-      console.log('')
-      console.log('=== TODAS AS 138 LINHAS COMPLETAS ===')
-      console.log(JSON.stringify(allValues, null, 2))
-      console.log('====================================')
-      
       setProcessedData(processed)
 
       if (processed.length > 0) {
@@ -565,50 +397,17 @@ const LinhaTempo: React.FC = () => {
   const totalInvestment = useMemo(() => {
     // Converter para centavos, somar, e converter de volta para reais
     // Esta abordagem evita erros de precisão de ponto flutuante
-    let totalInCents = 0
-    let directSum = 0 // Para comparação
-    const debugValues: Array<{ value: number, cents: number, original: any }> = []
-    
-    for (const item of filteredData) {
-      // Garantir que o valor seja válido e numérico
-      const value = Number(item.totalSpent)
+    const totalInCents = filteredData.reduce((sum, item) => {
+      const value = Number(item.totalSpent) || 0
       if (!isNaN(value) && isFinite(value) && value >= 0) {
-        // Converter diretamente para centavos sem usar toFixed
-        // Multiplicar por 100 e arredondar para o inteiro mais próximo
-        // Isso evita problemas de precisão de ponto flutuante
         const cents = Math.round(value * 100)
-        totalInCents += cents
-        directSum += value
-        
-        // Debug: coletar valores para análise
-        if (debugValues.length < 10 || value > 1000) {
-          debugValues.push({
-            value,
-            cents,
-            original: item.totalSpent
-          })
-        }
+        return sum + cents
       }
-    }
+      return sum
+    }, 0)
     
     // Converter de volta para reais
-    // O resultado já está em centavos, então dividir por 100
-    const result = totalInCents / 100
-    
-    // Debug temporário
-    console.log('=== INVESTIMENTO TOTAL DEBUG ===')
-    console.log('Total em centavos:', totalInCents)
-    console.log('Total em reais (centavos/100):', result)
-    console.log('Soma direta (sem conversão):', directSum)
-    console.log('Diferença:', Math.abs(result - directSum))
-    console.log('Esperado: 36193.36')
-    console.log('Diferença do esperado:', Math.abs(result - 36193.36))
-    console.log('Total de itens processados:', filteredData.length)
-    console.log('Amostra de valores:', debugValues.slice(0, 5))
-    console.log('================================')
-    
-    // O resultado já está correto, não precisa arredondar novamente
-    return result
+    return totalInCents / 100
   }, [filteredData])
   const totalImpressions = useMemo(() => filteredData.reduce((sum, item) => sum + item.impressions, 0), [filteredData])
   const totalClicks = useMemo(() => filteredData.reduce((sum, item) => sum + item.clicks, 0), [filteredData])
