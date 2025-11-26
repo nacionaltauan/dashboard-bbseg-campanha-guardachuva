@@ -1,7 +1,7 @@
 import React from "react"
 import { apiNacional } from "./api"
 
-// Interface para dados de benchmark
+// Interface para dados de benchmark (Map - mantida para compatibilidade)
 export interface BenchmarkData {
   veiculo: string
   modalidade: string
@@ -13,6 +13,15 @@ export interface BenchmarkData {
   ctr: number
   vtr: number
   completionRate: number
+}
+
+// Interface para dados brutos de benchmark (Array - para filtragem no frontend)
+export interface BenchmarkDataRaw {
+  veiculo: string
+  modalidade: string
+  custo: number
+  impressoes: number
+  cliques: number
 }
 
 // Função para buscar dados de benchmark
@@ -119,6 +128,83 @@ export const processBenchmarkData = (apiData: any): Map<string, BenchmarkData> =
   }
   
   return benchmarkMap
+}
+
+// Função para processar dados de benchmark em formato Array (raw)
+export const processBenchmarkDataRaw = (apiData: any): BenchmarkDataRaw[] => {
+  const benchmarkDataRaw: BenchmarkDataRaw[] = []
+  
+  if (!apiData?.values) {
+    console.warn("⚠️ [DEBUG] Estrutura de dados inválida ou vazia recebida")
+    return benchmarkDataRaw
+  }
+
+  const headers = apiData.values[0]
+  const rows = apiData.values.slice(1) // Pular header
+  
+  console.log("📦 [DEBUG] Total de linhas (sem header):", rows.length)
+  if (rows.length > 0) {
+    console.log("🧐 [DEBUG] Exemplo da primeira linha bruta:", rows[0])
+  }
+
+  rows.forEach((row: any[], index: number) => {
+    const parseNumber = (value: string | number) => {
+      if (!value || value === "") return 0
+      const stringValue = value.toString().trim()
+      // Remover R$, pontos de milhar, trocar vírgula por ponto
+      const cleanValue = stringValue.replace(/R\$\s*/g, "").replace(/\./g, "").replace(",", ".")
+      return Number.parseFloat(cleanValue) || 0
+    }
+
+    // Tentar encontrar colunas por nome do header primeiro, depois por índice
+    const getValueByHeaderOrIndex = (headerName: string, defaultIndex: number) => {
+      if (headers && Array.isArray(headers)) {
+        const headerIndex = headers.findIndex((h: string) => 
+          h && h.toString().toLowerCase().includes(headerName.toLowerCase())
+        )
+        if (headerIndex >= 0 && row[headerIndex] !== undefined) {
+          return row[headerIndex]
+        }
+      }
+      return row[defaultIndex]
+    }
+
+    const veiculo = (getValueByHeaderOrIndex("veiculo", 0) || row[0] || "").toString().trim()
+    const modalidade = (getValueByHeaderOrIndex("modalidade", 1) || row[1] || "").toString().trim().toLowerCase()
+    
+    // Buscar custo, impressões e cliques
+    const custo = parseNumber(getValueByHeaderOrIndex("custo", 2) || getValueByHeaderOrIndex("cost", 2) || getValueByHeaderOrIndex("spent", 2) || row[2] || "0")
+    const impressoes = parseNumber(getValueByHeaderOrIndex("impress", 3) || getValueByHeaderOrIndex("impressions", 3) || row[3] || "0")
+    const cliques = parseNumber(getValueByHeaderOrIndex("click", 4) || getValueByHeaderOrIndex("clicks", 4) || row[4] || "0")
+
+    if (index < 3) {
+      console.log(`📝 [DEBUG] Parse Linha ${index}:`, {
+        Veiculo: veiculo,
+        Modalidade: modalidade,
+        CustoOriginal: getValueByHeaderOrIndex("custo", 2) || row[2],
+        CustoFinal: custo,
+        Impressoes: impressoes,
+        Cliques: cliques
+      })
+    }
+
+    if (veiculo && modalidade) {
+      benchmarkDataRaw.push({
+        veiculo: veiculo.toUpperCase(),
+        modalidade: modalidade.toLowerCase(),
+        custo,
+        impressoes,
+        cliques,
+      })
+    }
+  })
+
+  console.log(`✅ [DEBUG] Total de linhas válidas carregadas: ${benchmarkDataRaw.length}`)
+  if (benchmarkDataRaw.length > 0) {
+    console.log("🧐 [DEBUG] Amostra dos dados:", benchmarkDataRaw.slice(0, 3))
+  }
+
+  return benchmarkDataRaw
 }
 
 // Função para calcular variação

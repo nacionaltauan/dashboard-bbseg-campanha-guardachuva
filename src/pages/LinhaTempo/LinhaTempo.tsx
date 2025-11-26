@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { ResponsiveLine } from "@nivo/line"
 import { Calendar, Filter, TrendingUp, Play, Info, DollarSign, MousePointer, Eye, BarChart3, Target, Percent, MapPin } from "lucide-react"
 import { useConsolidadoNacionalData } from "../../services/api"
-import { useBenchmarkNacionalData, processBenchmarkData } from "../../services/benchmarkApi"
+import { useBenchmarkNacionalData, processBenchmarkData, processBenchmarkDataRaw, type BenchmarkDataRaw } from "../../services/benchmarkApi"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import AnaliseSemanal from "./components/AnaliseSemanal"
 import Loading from "../../components/Loading/Loading"
@@ -52,6 +52,7 @@ const LinhaTempo: React.FC = () => {
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
   const { data: benchmarkData } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<DataPoint[]>([])
+  const [benchmarkDataRaw, setBenchmarkDataRaw] = useState<BenchmarkDataRaw[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<string[]>([])
@@ -419,7 +420,7 @@ const LinhaTempo: React.FC = () => {
   const ctr = useMemo(() => (totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0), [totalClicks, totalImpressions])
   const cpm = useMemo(() => (totalImpressions > 0 ? (totalInvestment / totalImpressions) * 1000 : 0), [totalInvestment, totalImpressions])
 
-  // Processar dados de benchmark
+  // Processar dados de benchmark (mantido para compatibilidade com outras páginas)
   const benchmarkMap = useMemo(() => {
     if (benchmarkData?.data) {
       return processBenchmarkData(benchmarkData.data)
@@ -427,14 +428,7 @@ const LinhaTempo: React.FC = () => {
     return new Map()
   }, [benchmarkData])
 
-  // Função para mapear nome do veículo para chave do benchmark
-  const mapVehicleToBenchmarkKey = (vehicle: string): string => {
-    if (vehicle === "Meta") return "META"
-    if (vehicle === "TikTok") return "TIK TOK"
-    return vehicle.toUpperCase()
-  }
-
-  // Funções de formatação (definidas antes para serem usadas nas funções de variação)
+  // Funções de formatação
   const formatCurrency = (value: number): string => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
@@ -447,71 +441,67 @@ const LinhaTempo: React.FC = () => {
     return `${value.toFixed(2).replace(".", ",")}%`
   }
 
-  // Calcular benchmark agregado baseado nos filtros
-  const aggregatedBenchmark = useMemo(() => {
-    let totalImpressions = 0
-    let totalClicks = 0
-    let totalCost = 0
-
-    // Se não há filtros, somar todos os benchmarks
-    if (selectedVehicles.length === 0 && selectedModalidades.length === 0) {
-      benchmarkMap.forEach((benchmark) => {
-        totalImpressions += benchmark.impressions || 0
-        totalClicks += benchmark.clicks || 0
-        totalCost += benchmark.cost || 0
-      })
-    } else {
-      // Filtrar benchmarks baseado nos filtros selecionados
-      const vehiclesToUse = selectedVehicles.length > 0 ? selectedVehicles : availableVehicles
-      const modalidadesToUse = selectedModalidades.length > 0 ? selectedModalidades : availableModalidades
-
-      vehiclesToUse.forEach((vehicle) => {
-        const benchmarkKey = mapVehicleToBenchmarkKey(vehicle)
-        
-        modalidadesToUse.forEach((modalidade) => {
-          const key = `${benchmarkKey}_${modalidade.toLowerCase()}`
-          const benchmark = benchmarkMap.get(key)
-          
-          if (benchmark) {
-            totalImpressions += benchmark.impressions || 0
-            totalClicks += benchmark.clicks || 0
-            totalCost += benchmark.cost || 0
-          }
-        })
-      })
-    }
-
-    // Calcular taxas a partir dos totais
-    const benchmarkCPM = totalImpressions > 0 ? (totalCost / totalImpressions) * 1000 : 0
-    const benchmarkCPC = totalClicks > 0 ? totalCost / totalClicks : 0
-    const benchmarkCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-
-    return {
-      impressions: totalImpressions,
-      clicks: totalClicks,
-      cpm: benchmarkCPM,
-      cpc: benchmarkCPC,
-      ctr: benchmarkCTR,
-    }
-  }, [benchmarkMap, selectedVehicles, selectedModalidades, availableVehicles, availableModalidades])
-
-  // Função para formatar valores de benchmark
-  const formatBenchmarkValue = (value: number, type: 'number' | 'currency' | 'percentage'): string => {
-    // Verificar se há dados de benchmark disponíveis
-    if (benchmarkMap.size === 0) return "N/A"
-    if (isNaN(value) || !isFinite(value)) return "N/A"
-    // Para valores numéricos, 0 pode ser válido, então só verificamos NaN/Infinity
-    // Para taxas e custos, 0 pode indicar ausência de dados
-    if (type !== 'number' && value === 0) return "N/A"
-    
-    if (type === 'currency') {
-      return formatCurrency(value)
-    } else if (type === 'percentage') {
-      return formatPercentage(value)
-    } else {
-      return formatFullNumber(value)
-    }
+  // Função para mapear nome do veículo para matching
+  const normalizeVehicleName = (vehicle: string): string => {
+    const normalized = vehicle.toUpperCase().trim()
+    if (normalized === "META") return "META"
+    if (normalized === "TIKTOK" || normalized === "TIK TOK") return "TIK TOK"
+    return normalized
   }
+
+  // Calcular métricas comparativas do benchmark baseado nos filtros
+  const benchmarkMetrics = useMemo(() => {
+    // Se não tiver dados, nem tenta calcular
+    if (benchmarkDataRaw.length === 0) {
+      return { custo: 0, impressoes: 0, cliques: 0, cpc: 0, ctr: 0, cpm: 0 }
+    }
+
+    console.log(`🔍 [DEBUG] Calculando Métricas. Filtros:`, { 
+      Veiculos: selectedVehicles, 
+      Modalidades: selectedModalidades 
+    })
+
+    // 1. Filtrar
+    const filtered = benchmarkDataRaw.filter(item => {
+      // Normalização forçada para comparação (tudo minúsculo/maiúsculo)
+      const itemVeiculo = normalizeVehicleName(item.veiculo)
+      const itemModalidade = item.modalidade.toLowerCase()
+      
+      // Verifica Veículo
+      const matchVehicle = selectedVehicles.length === 0 || 
+        selectedVehicles.some(v => normalizeVehicleName(v) === itemVeiculo)
+
+      // Verifica Modalidade
+      const matchModalidade = selectedModalidades.length === 0 || 
+        selectedModalidades.some(m => m.toLowerCase() === itemModalidade)
+      
+      return matchVehicle && matchModalidade
+    })
+
+    console.log(`📊 [DEBUG] Linhas restantes após filtro: ${filtered.length}`)
+    if (filtered.length === 0 && (selectedVehicles.length > 0 || selectedModalidades.length > 0)) {
+      console.warn(`⚠️ [DEBUG] ALERTA: Filtros ativos mas nenhuma linha encontrada!`)
+      console.log("Veículos disponíveis na base:", Array.from(new Set(benchmarkDataRaw.map(d => d.veiculo))))
+      console.log("Modalidades disponíveis na base:", Array.from(new Set(benchmarkDataRaw.map(d => d.modalidade))))
+    }
+
+    // 2. Somar Absolutos
+    const totalCusto = filtered.reduce((acc, item) => acc + item.custo, 0)
+    const totalImpressoes = filtered.reduce((acc, item) => acc + item.impressoes, 0)
+    const totalCliques = filtered.reduce((acc, item) => acc + item.cliques, 0)
+
+    console.log("💰 [DEBUG] Totais Calculados:", { totalCusto, totalImpressoes, totalCliques })
+
+    // 3. Calcular Taxas
+    return {
+      custo: totalCusto,
+      impressoes: totalImpressoes,
+      cliques: totalCliques,
+      cpc: totalCliques > 0 ? totalCusto / totalCliques : 0,
+      ctr: totalImpressoes > 0 ? (totalCliques / totalImpressoes) * 100 : 0,
+      cpm: totalImpressoes > 0 ? (totalCusto / totalImpressoes) * 1000 : 0
+    }
+  }, [benchmarkDataRaw, selectedVehicles, selectedModalidades])
   
   // Função para formatar valores do eixo Y e tooltip
   const formatChartValue = (value: number): string => {
@@ -542,6 +532,57 @@ const LinhaTempo: React.FC = () => {
     })
   }
 
+  // Função auxiliar para renderizar comparativo
+  const renderComparison = (
+    currentValue: number, 
+    refValue: number, 
+    type: 'volume' | 'taxa' | 'custo',
+    formatFn: (v: number) => string
+  ) => {
+    if (refValue === 0) return <span className="text-xs text-gray-400 mt-1">Sem histórico</span>
+
+    let diff: number
+    let percentDiff: number
+    let isPositiveBad = false // Flag para métricas onde aumento é ruim (Custo)
+    let label = ""
+
+    if (type === 'volume') {
+      // Variação Percentual ((Atual / Ref) - 1) * 100
+      diff = currentValue - refValue
+      percentDiff = ((currentValue / refValue) - 1) * 100
+      label = `${percentDiff > 0 ? "+" : ""}${percentDiff.toFixed(1)}%`
+      isPositiveBad = false // Mais impressões/cliques é bom (Verde)
+    } else if (type === 'taxa') {
+      // Diferença em pontos percentuais (Atual - Ref)
+      diff = currentValue - refValue
+      label = `${diff > 0 ? "+" : ""}${diff.toFixed(2)} p.p.`
+      isPositiveBad = false // Maior CTR é bom (Verde)
+    } else {
+      // Custo (Atual - Ref) em Reais
+      diff = currentValue - refValue
+      label = `${diff > 0 ? "+" : ""}${formatCurrency(Math.abs(diff))}`
+      isPositiveBad = true // Custo maior é ruim (Vermelho)
+    }
+
+    // Lógica de Cores:
+    // Se type='custo' e diff > 0 (mais caro) -> Ruim (Vermelho)
+    // Se type='custo' e diff < 0 (mais barato) -> Bom (Verde)
+    // Se type!='custo' e diff > 0 (mais volume) -> Bom (Verde)
+    const isGood = isPositiveBad ? diff < 0 : diff > 0
+    const colorClass = isGood ? "text-green-600" : "text-red-600"
+
+    return (
+      <div className="flex flex-col items-start mt-1">
+        <span className={`text-xs font-bold ${colorClass}`}>
+          {label}
+        </span>
+        <span className="text-[10px] text-gray-500">
+          Ref: {formatFn(refValue)}
+        </span>
+      </div>
+    )
+  }
+
   useEffect(() => {
     if (processedData.length > 0) {
       const modalidadeSet = new Set<string>()
@@ -553,6 +594,34 @@ const LinhaTempo: React.FC = () => {
       setSelectedModalidades([])
     }
   }, [processedData])
+
+  // Effect para carregar dados brutos do benchmark
+  useEffect(() => {
+    const loadBenchmarkRaw = async () => {
+      console.log("🚀 [DEBUG] Iniciando fetch do Benchmark...")
+      try {
+        if (benchmarkData) {
+          console.log("📦 [DEBUG] Dados brutos da API:", benchmarkData)
+          
+          // A API pode retornar { data: { values: [...] } } ou { values: [...] }
+          const apiData = benchmarkData.data || benchmarkData
+          
+          if (apiData) {
+            const processed = processBenchmarkDataRaw(apiData)
+            console.log(`✅ [DEBUG] Total de linhas válidas carregadas: ${processed.length}`)
+            setBenchmarkDataRaw(processed)
+          } else {
+            console.warn("⚠️ [DEBUG] Estrutura de dados inválida - apiData não encontrado")
+          }
+        } else {
+          console.warn("⚠️ [DEBUG] benchmarkData não disponível ainda")
+        }
+      } catch (err) {
+        console.error("❌ [DEBUG] Erro fatal ao carregar Benchmark", err)
+      }
+    }
+    loadBenchmarkRaw()
+  }, [benchmarkData])
 
   if (isWeeklyAnalysis) {
     return (
@@ -688,73 +757,69 @@ const LinhaTempo: React.FC = () => {
 
       {/* Seção de Estatísticas atualizada para 6 colunas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        {/* Investimento */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg"><DollarSign className="w-5 h-5 text-green-600" /></div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Investimento Total</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(totalInvestment)}</p>
+              {renderComparison(totalInvestment, benchmarkMetrics.custo, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
+        {/* Impressões */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg"><Eye className="w-5 h-5 text-blue-600" /></div>
-            <div className="ml-3 flex-1">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Impressões</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalImpressions)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatBenchmarkValue(aggregatedBenchmark.impressions, 'number')}
-              </p>
+              {renderComparison(totalImpressions, benchmarkMetrics.impressoes, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
+        {/* Cliques */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg"><MousePointer className="w-5 h-5 text-purple-600" /></div>
-            <div className="ml-3 flex-1">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Cliques</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalClicks)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatBenchmarkValue(aggregatedBenchmark.clicks, 'number')}
-              </p>
+              {renderComparison(totalClicks, benchmarkMetrics.cliques, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
-        {/* Novos cards */}
+        {/* CPC */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg"><MousePointer className="w-5 h-5 text-yellow-600" /></div>
-            <div className="ml-3 flex-1">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPC</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpc)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatBenchmarkValue(aggregatedBenchmark.cpc, 'currency')}
-              </p>
+              {renderComparison(cpc, benchmarkMetrics.cpc, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
+        {/* CTR */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-indigo-100 rounded-lg"><Percent className="w-5 h-5 text-indigo-600" /></div>
-            <div className="ml-3 flex-1">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CTR</p>
               <p className="text-xl font-bold text-gray-900">{formatPercentage(ctr)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatBenchmarkValue(aggregatedBenchmark.ctr, 'percentage')}
-              </p>
+              {renderComparison(ctr, benchmarkMetrics.ctr, 'taxa', formatPercentage)}
             </div>
           </div>
         </div>
+        {/* CPM */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg"><Target className="w-5 h-5 text-red-600" /></div>
-            <div className="ml-3 flex-1">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPM</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpm)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatBenchmarkValue(aggregatedBenchmark.cpm, 'currency')}
-              </p>
+              {renderComparison(cpm, benchmarkMetrics.cpm, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
