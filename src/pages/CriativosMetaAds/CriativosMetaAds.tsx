@@ -138,6 +138,13 @@ const CriativosMeta: FC = () => {
 
   // Processar dados não tratados (Meta Não Tratado)
   useEffect(() => {
+    // Não processar se houver erro
+    if (errorUntreated) {
+      console.warn("Erro ao carregar dados não tratados:", errorUntreated)
+      setProcessedDataUntreated([])
+      return
+    }
+
     console.log("API Data Untreated:", apiDataUntreated)
     console.log("API Data Untreated structure:", apiDataUntreated?.data)
     
@@ -332,8 +339,13 @@ const CriativosMeta: FC = () => {
       const formatos = Array.from(formatoSet).filter(Boolean).sort()
       console.log("Formatos disponíveis:", formatos)
       setAvailableFormatos(formatos)
+    } else {
+      // Se não houver dados, limpar os estados
+      console.log("Nenhum dado não tratado encontrado")
+      setProcessedDataUntreated([])
+      setAvailableFormatos([])
     }
-  }, [apiDataUntreated])
+  }, [apiDataUntreated, errorUntreated])
 
   useEffect(() => {
     if (apiData?.values) {

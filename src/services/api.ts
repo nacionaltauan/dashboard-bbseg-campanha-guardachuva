@@ -1109,13 +1109,23 @@ export const fetchMetaTratadoData = async () => {
 // NOVA FUNÇÃO para buscar dados do Meta - Não Tratado
 export const fetchMetaNaoTratadoData = async () => {
   try {
+    // Tentar primeiro com underscore (padrão)
     const response = await apiNacional.get(
-      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta%20nao%20tratado",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta_nao_tratado",
     )
     return response.data
   } catch (error) {
-    console.error("Erro ao buscar dados do Meta - Não Tratado:", error)
-    throw error
+    console.error("Erro ao buscar dados do Meta - Não Tratado (tentando com underscore):", error)
+    // Tentar com espaço caso o underscore não funcione
+    try {
+      const response = await apiNacional.get(
+        "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta%20nao%20tratado",
+      )
+      return response.data
+    } catch (fallbackError) {
+      console.error("Erro ao buscar dados do Meta - Não Tratado (tentando com espaço):", fallbackError)
+      throw fallbackError
+    }
   }
 }
 

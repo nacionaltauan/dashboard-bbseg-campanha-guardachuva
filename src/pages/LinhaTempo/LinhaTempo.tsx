@@ -764,7 +764,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Investimento Total</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(totalInvestment)}</p>
-              {renderComparison(totalInvestment, benchmarkMetrics.custo, 'custo', formatCurrency)}
             </div>
           </div>
         </div>

@@ -142,6 +142,7 @@ export const processBenchmarkDataRaw = (apiData: any): BenchmarkDataRaw[] => {
   const headers = apiData.values[0]
   const rows = apiData.values.slice(1) // Pular header
   
+  console.log("📦 [DEBUG] Headers encontrados:", headers)
   console.log("📦 [DEBUG] Total de linhas (sem header):", rows.length)
   if (rows.length > 0) {
     console.log("🧐 [DEBUG] Exemplo da primeira linha bruta:", rows[0])
