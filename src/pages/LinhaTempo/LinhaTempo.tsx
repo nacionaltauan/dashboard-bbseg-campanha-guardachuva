@@ -461,17 +461,17 @@ const LinhaTempo: React.FC = () => {
       Modalidades: selectedModalidades 
     })
 
-    // 1. Filtrar
+    // 1. Filtrar (lógica adaptada do CCBB-Flight2, usando modalidade ao invés de praca)
     const filtered = benchmarkDataRaw.filter(item => {
-      // Normalização forçada para comparação (tudo minúsculo/maiúsculo)
+      // Normalização forçada para comparação (adaptada do CCBB-Flight2)
       const itemVeiculo = normalizeVehicleName(item.veiculo)
       const itemModalidade = item.modalidade.toLowerCase()
       
-      // Verifica Veículo
+      // Verifica Veículo (usando normalização especial para META/TIKTOK)
       const matchVehicle = selectedVehicles.length === 0 || 
         selectedVehicles.some(v => normalizeVehicleName(v) === itemVeiculo)
 
-      // Verifica Modalidade
+      // Verifica Modalidade (equivalente a "Verifica Praça" no CCBB-Flight2)
       const matchModalidade = selectedModalidades.length === 0 || 
         selectedModalidades.some(m => m.toLowerCase() === itemModalidade)
       
@@ -532,44 +532,52 @@ const LinhaTempo: React.FC = () => {
     })
   }
 
-  // Função auxiliar para renderizar comparativo
+  // Função auxiliar para renderizar comparativo (adaptada da lógica do CCBB-Flight2)
   const renderComparison = (
     currentValue: number, 
     refValue: number, 
-    type: 'volume' | 'taxa' | 'custo',
+    type: 'volume' | 'taxa' | 'custo' | 'investment', // Adicionado 'investment' para compatibilidade
     formatFn: (v: number) => string
   ) => {
     if (refValue === 0) return <span className="text-xs text-gray-400 mt-1">Sem histórico</span>
 
     let diff: number
     let percentDiff: number
-    let isPositiveBad = false // Flag para métricas onde aumento é ruim (Custo)
+    let isPositiveBad = false 
     let label = ""
+    let customColor = "" // Variável para cor personalizada
 
     if (type === 'volume') {
-      // Variação Percentual ((Atual / Ref) - 1) * 100
+      // Variação Percentual
       diff = currentValue - refValue
       percentDiff = ((currentValue / refValue) - 1) * 100
       label = `${percentDiff > 0 ? "+" : ""}${percentDiff.toFixed(1)}%`
-      isPositiveBad = false // Mais impressões/cliques é bom (Verde)
+      isPositiveBad = false
     } else if (type === 'taxa') {
-      // Diferença em pontos percentuais (Atual - Ref)
+      // Diferença em pontos percentuais
       diff = currentValue - refValue
       label = `${diff > 0 ? "+" : ""}${diff.toFixed(2)} p.p.`
-      isPositiveBad = false // Maior CTR é bom (Verde)
-    } else {
-      // Custo (Atual - Ref) em Reais
+      isPositiveBad = false
+    } else if (type === 'investment') {
+      // Lógica para investimento (neutro - azul) - não será usado conforme instrução
       diff = currentValue - refValue
-      label = `${diff > 0 ? "+" : ""}${formatCurrency(Math.abs(diff))}`
-      isPositiveBad = true // Custo maior é ruim (Vermelho)
+      label = `${diff > 0 ? "+" : ""}${formatCurrency(diff)}`
+      customColor = "text-blue-600" // Força a cor Azul Neutro
+    } else {
+      // Custo (CPC, CPM) - Vermelho/Verde mantido
+      diff = currentValue - refValue
+      label = `${diff > 0 ? "+" : ""}${formatCurrency(diff)}`
+      isPositiveBad = true 
     }
 
-    // Lógica de Cores:
-    // Se type='custo' e diff > 0 (mais caro) -> Ruim (Vermelho)
-    // Se type='custo' e diff < 0 (mais barato) -> Bom (Verde)
-    // Se type!='custo' e diff > 0 (mais volume) -> Bom (Verde)
-    const isGood = isPositiveBad ? diff < 0 : diff > 0
-    const colorClass = isGood ? "text-green-600" : "text-red-600"
+    // Define a classe de cor
+    let colorClass = ""
+    if (customColor) {
+        colorClass = customColor
+    } else {
+        const isGood = isPositiveBad ? diff < 0 : diff > 0
+        colorClass = isGood ? "text-green-600" : "text-red-600"
+    }
 
     return (
       <div className="flex flex-col items-start mt-1">
