@@ -157,6 +157,19 @@ const CriativosMeta: FC = () => {
       console.log("Rows count Untreated (data.values):", rows.length)
       console.log("Primeira linha de dados (data.values):", rows[0])
       
+      // Função auxiliar para buscar valor por nome da coluna (case-insensitive e com fallback)
+      const getValueByColumnName = (row: string[], columnNames: string[]): string => {
+        for (const colName of columnNames) {
+          const index = headers.findIndex((h: string) => 
+            h && h.toString().trim().toLowerCase() === colName.toLowerCase()
+          )
+          if (index >= 0 && row[index] !== undefined) {
+            return row[index] || ""
+          }
+        }
+        return ""
+      }
+      
       // Processar dados da estrutura data.values
       const processed: CreativeDataUntreated[] = rows
         .map((row: string[]) => {
@@ -170,21 +183,22 @@ const CriativosMeta: FC = () => {
             return Number.parseInt(value.replace(/[.\s]/g, "").replace(",", "")) || 0
           }
 
-          const date = row[headers.indexOf("Date")] || "" // Date
-          const campaignName = row[headers.indexOf("Campaign name")] || "" // Campaign name
-          const creativeTitle = row[headers.indexOf("Ad name")] || "" // Ad name (Creative title)
-          const reach = parseInteger(row[headers.indexOf("Reach")]) // Reach
-          const impressions = parseInteger(row[headers.indexOf("Impressions")]) // Impressions
-          const clicks = parseInteger(row[headers.indexOf("Clicks (all)")]) // Clicks (all)
-          const totalSpent = parseNumber(row[headers.indexOf("Cost")]) // Cost
-          const videoViews = parseInteger(row[headers.indexOf("Three-second video views")]) // Three-second video views
-          const videoViews25 = parseInteger(row[headers.indexOf("Video watches at 25%")]) // Video watches at 25%
-          const videoViews50 = parseInteger(row[headers.indexOf("Video watches at 50%")]) // Video watches at 50%
-          const videoViews75 = parseInteger(row[headers.indexOf("Video watches at 75%")]) // Video watches at 75%
-          const videoCompletions = parseInteger(row[headers.indexOf("Video watches at 100%")]) // Video watches at 100%
-          const videoStarts = parseInteger(row[headers.indexOf("Three-second video views")]) // Three-second video views (mesma coluna)
-          const totalEngagements = parseInteger(row[headers.indexOf("Post engagements")]) // Post engagements
-          const formato = row[headers.indexOf("Platform position")] || "" // Platform position
+          // Buscar por nomes de colunas ao invés de índices fixos
+          const date = getValueByColumnName(row, ["Date", "Data"]) || ""
+          const campaignName = getValueByColumnName(row, ["Campaign name", "Nome da Campanha"]) || ""
+          const creativeTitle = getValueByColumnName(row, ["Ad name", "Nome do Anúncio", "Creative title"]) || ""
+          const reach = parseInteger(getValueByColumnName(row, ["Reach", "Alcance"]))
+          const impressions = parseInteger(getValueByColumnName(row, ["Impressions", "Impressões", "Impressoes"]))
+          const clicks = parseInteger(getValueByColumnName(row, ["Clicks (all)", "Clicks", "Cliques"]))
+          const totalSpent = parseNumber(getValueByColumnName(row, ["Cost", "Total spent", "Custo", "Gasto Total"]))
+          const videoViews = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video views"]))
+          const videoViews25 = parseInteger(getValueByColumnName(row, ["Video watches at 25%", "Visualizações a 25%"]))
+          const videoViews50 = parseInteger(getValueByColumnName(row, ["Video watches at 50%", "Visualizações a 50%"]))
+          const videoViews75 = parseInteger(getValueByColumnName(row, ["Video watches at 75%", "Visualizações a 75%"]))
+          const videoCompletions = parseInteger(getValueByColumnName(row, ["Video watches at 100%", "Visualizações a 100%", "Video completions"]))
+          const videoStarts = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video starts"]))
+          const totalEngagements = parseInteger(getValueByColumnName(row, ["Post engagements", "Engajamentos", "Total engagements"]))
+          const formato = getValueByColumnName(row, ["Platform position", "Posição da Plataforma", "Formato"]) || ""
           
           // Debug para primeira linha
           if (rows.indexOf(row) === 0) {
@@ -252,6 +266,19 @@ const CriativosMeta: FC = () => {
       console.log("Rows count Untreated:", rows.length)
       console.log("Primeira linha de dados:", rows[0])
 
+      // Função auxiliar para buscar valor por nome da coluna (case-insensitive e com fallback)
+      const getValueByColumnName = (row: string[], columnNames: string[]): string => {
+        for (const colName of columnNames) {
+          const index = headers.findIndex((h: string) => 
+            h && h.toString().trim().toLowerCase() === colName.toLowerCase()
+          )
+          if (index >= 0 && row[index] !== undefined) {
+            return row[index] || ""
+          }
+        }
+        return ""
+      }
+
       const processed: CreativeDataUntreated[] = rows
         .map((row: string[]) => {
           const parseNumber = (value: string) => {
@@ -264,21 +291,22 @@ const CriativosMeta: FC = () => {
             return Number.parseInt(value.replace(/[.\s]/g, "").replace(",", "")) || 0
           }
 
-          const date = row[headers.indexOf("A")] || "" // Date - A
-          const campaignName = row[headers.indexOf("B")] || "" // Campaign name - B
-          const creativeTitle = row[headers.indexOf("D")] || "" // Creative title - D
-          const reach = parseInteger(row[headers.indexOf("M")]) // Reach - M
-          const impressions = parseInteger(row[headers.indexOf("N")]) // Impressions - N
-          const clicks = parseInteger(row[headers.indexOf("Q")]) // Clicks - Q
-          const totalSpent = parseNumber(row[headers.indexOf("AF")]) // Total spent - AF
-          const videoViews = parseInteger(row[headers.indexOf("X")]) // Video views - X
-          const videoViews25 = parseInteger(row[headers.indexOf("Z")]) // Video views at 25% - Z
-          const videoViews50 = parseInteger(row[headers.indexOf("AA")]) // Video views at 50% - AA
-          const videoViews75 = parseInteger(row[headers.indexOf("AB")]) // Video views at 75% - AB
-          const videoCompletions = parseInteger(row[headers.indexOf("AC")]) // Video completions - AC
-          const videoStarts = parseInteger(row[headers.indexOf("X")]) // Video starts - X (mesma coluna)
-          const totalEngagements = parseInteger(row[headers.indexOf("R")]) // Total engagements - R
-          const formato = row[headers.indexOf("Platform position")] || "" // Platform position
+          // Buscar por nomes de colunas ao invés de índices
+          const date = getValueByColumnName(row, ["Date", "Data"]) || ""
+          const campaignName = getValueByColumnName(row, ["Campaign name", "Nome da Campanha"]) || ""
+          const creativeTitle = getValueByColumnName(row, ["Ad name", "Nome do Anúncio", "Creative title"]) || ""
+          const reach = parseInteger(getValueByColumnName(row, ["Reach", "Alcance"]))
+          const impressions = parseInteger(getValueByColumnName(row, ["Impressions", "Impressões", "Impressoes"]))
+          const clicks = parseInteger(getValueByColumnName(row, ["Clicks (all)", "Clicks", "Cliques"]))
+          const totalSpent = parseNumber(getValueByColumnName(row, ["Cost", "Total spent", "Custo", "Gasto Total"]))
+          const videoViews = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video views"]))
+          const videoViews25 = parseInteger(getValueByColumnName(row, ["Video watches at 25%", "Visualizações a 25%"]))
+          const videoViews50 = parseInteger(getValueByColumnName(row, ["Video watches at 50%", "Visualizações a 50%"]))
+          const videoViews75 = parseInteger(getValueByColumnName(row, ["Video watches at 75%", "Visualizações a 75%"]))
+          const videoCompletions = parseInteger(getValueByColumnName(row, ["Video watches at 100%", "Visualizações a 100%", "Video completions"]))
+          const videoStarts = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video starts"]))
+          const totalEngagements = parseInteger(getValueByColumnName(row, ["Post engagements", "Engajamentos", "Total engagements"]))
+          const formato = getValueByColumnName(row, ["Platform position", "Posição da Plataforma", "Formato"]) || ""
           
           // Debug para primeira linha
           if (rows.indexOf(row) === 0) {

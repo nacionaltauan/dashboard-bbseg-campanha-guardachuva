@@ -96,9 +96,9 @@ export const processBenchmarkData = (apiData: any): Map<string, BenchmarkData> =
         }
         
         const impressions = parseNumber(getValueByHeaderOrIndex("impress", 4) || "0")
-        const clicks = parseNumber(getValueByHeaderOrIndex("click", 5) || "0")
-        const cpm = parseNumber(getValueByHeaderOrIndex("cpm", 2) || "0")
-        const cpc = parseNumber(getValueByHeaderOrIndex("cpc", 3) || "0")
+        const clicks = parseNumber(getValueByHeaderOrIndex("click", 3) || "0") // Coluna D (índice 3)
+        const cpm = parseNumber(getValueByHeaderOrIndex("cpm", 5) || "0") // Coluna F (índice 5)
+        const cpc = parseNumber(getValueByHeaderOrIndex("cpc", 6) || "0") // Coluna G (índice 6)
         
         // Calcular custo total: tentar coluna direta, senão calcular a partir de CPM ou CPC
         let cost = parseNumber(getValueByHeaderOrIndex("cost", 6) || getValueByHeaderOrIndex("spent", 6) || "0")
@@ -119,7 +119,7 @@ export const processBenchmarkData = (apiData: any): Map<string, BenchmarkData> =
           cost,
           cpm,
           cpc,
-          ctr: parseNumber(getValueByHeaderOrIndex("ctr", 7) || "0"), // Coluna CTR
+          ctr: parseNumber(getValueByHeaderOrIndex("ctr", 10) || "0"), // Coluna K (índice 10)
           vtr: parseNumber(getValueByHeaderOrIndex("vtr", 8) || "0"), // Coluna VTR 100%
           completionRate: parseNumber(getValueByHeaderOrIndex("completion", 8) || "0"), // Coluna COMPLETION RATE
         })
@@ -175,8 +175,8 @@ export const processBenchmarkDataRaw = (apiData: any): BenchmarkDataRaw[] => {
     
     // Buscar custo, impressões e cliques
     const custo = parseNumber(getValueByHeaderOrIndex("custo", 2) || getValueByHeaderOrIndex("cost", 2) || getValueByHeaderOrIndex("spent", 2) || row[2] || "0")
-    const impressoes = parseNumber(getValueByHeaderOrIndex("impress", 3) || getValueByHeaderOrIndex("impressions", 3) || row[3] || "0")
-    const cliques = parseNumber(getValueByHeaderOrIndex("click", 4) || getValueByHeaderOrIndex("clicks", 4) || row[4] || "0")
+    const impressoes = parseNumber(getValueByHeaderOrIndex("impress", 4) || getValueByHeaderOrIndex("impressions", 4) || row[4] || "0")
+    const cliques = parseNumber(getValueByHeaderOrIndex("click", 3) || getValueByHeaderOrIndex("clicks", 3) || row[3] || "0") // Coluna D (índice 3)
 
     if (index < 3) {
       console.log(`📝 [DEBUG] Parse Linha ${index}:`, {
