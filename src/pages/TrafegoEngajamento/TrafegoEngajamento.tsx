@@ -820,18 +820,6 @@ if (receptivosError || eventosError) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-blue-600">Adquirir ingressos</p>
-                  <p className="text-lg font-bold text-blue-900">
-                    {formatNumber(processedEventosData.bbTrack)}
-                  </p>
-                </div>
-                <MessageCircle className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -990,28 +978,9 @@ if (receptivosError || eventosError) {
     <div className="card-overlay rounded-lg shadow-lg p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Conversões (CTAs)</h3>
       
-      {/* GRID CONTAINER PARA OS 2 CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* GRID CONTAINER PARA OS CARDS */}
+      <div className="grid grid-cols-1 gap-4">
         
-        {/* CARD ADQUIRIR INGRESSOS */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
-              <MessageCircle className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-blue-700">Adquirir ingressos</span>
-            </div>
-            <span className="text-2xl font-bold text-blue-900">
-              {formatNumber(processedEventosData.bbTrack)}
-            </span>
-          </div>
-          <p className="text-xs text-blue-600">
-            {processedResumoData.receptivo.sessoesCampanha > 0 
-              ? `${((processedEventosData.bbTrack / processedResumoData.receptivo.sessoesCampanha) * 100).toFixed(2)}% das sessões`
-              : '0% das sessões'
-            }
-          </p>
-        </div>
-
         {/* CARD FIRST VISIT */}
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
           <div className="flex items-center justify-between mb-2">
@@ -1066,7 +1035,7 @@ if (receptivosError || eventosError) {
           os gráficos e métricas refletem apenas os dados do período escolhido.
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          <strong>CTAs:</strong> Adquirir ingressos (botao-cta) e First Visit são as principais conversões monitoradas.
+          <strong>CTAs:</strong> First Visit é a principal conversão monitorada.
         </p>
       </div>
     </div>
