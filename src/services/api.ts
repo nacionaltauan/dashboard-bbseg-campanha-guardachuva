@@ -1326,11 +1326,12 @@ export const useEventosReceptivosData = () => {
   return { data, loading, error, refetch: loadData }
 }
 
-// NOVAS FUNÇÕES PARA A NOVA PLANILHA 1i1nW5ig7eG_6D8BdvxtEImKjdz7YVqBthU_WkUND8QM
+// NOVAS FUNÇÕES PARA A PLANILHA DE TRÁFEGO E ENGAJAMENTO
+// Planilha: https://docs.google.com/spreadsheets/d/1i00J0lh9iSvzuVCvr6TYaka0SQ2VN4GVTBwGB02VQ7c
 export const fetchGA4ReceptivosData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1i1nW5ig7eG_6D8BdvxtEImKjdz7YVqBthU_WkUND8QM/data?range=GA4_receptivos",
+      "/google/sheets/1i00J0lh9iSvzuVCvr6TYaka0SQ2VN4GVTBwGB02VQ7c/data?range=GA4_receptivos",
     )
     return response.data
   } catch (error) {
@@ -1342,7 +1343,7 @@ export const fetchGA4ReceptivosData = async () => {
 export const fetchEventosReceptivosNovaData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1i1nW5ig7eG_6D8BdvxtEImKjdz7YVqBthU_WkUND8QM/data?range=Eventos%20Receptivos",
+      "/google/sheets/1i00J0lh9iSvzuVCvr6TYaka0SQ2VN4GVTBwGB02VQ7c/data?range=Eventos%20Receptivos",
     )
     return response.data
   } catch (error) {

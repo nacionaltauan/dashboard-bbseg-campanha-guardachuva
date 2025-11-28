@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { ResponsiveLine } from "@nivo/line"
 import { Calendar, Filter, TrendingUp, Play, Info, DollarSign, MousePointer, Eye, BarChart3, Target, Percent, MapPin } from "lucide-react"
 import { useConsolidadoNacionalData } from "../../services/api"
-import { useBenchmarkNacionalData, processBenchmarkData, processBenchmarkDataRaw, type BenchmarkDataRaw } from "../../services/benchmarkApi"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import AnaliseSemanal from "./components/AnaliseSemanal"
 import Loading from "../../components/Loading/Loading"
@@ -50,9 +49,7 @@ interface VehicleEntry {
 const LinhaTempo: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
-  const { data: benchmarkData } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<DataPoint[]>([])
-  const [benchmarkDataRaw, setBenchmarkDataRaw] = useState<BenchmarkDataRaw[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<string[]>([])
@@ -420,14 +417,6 @@ const LinhaTempo: React.FC = () => {
   const ctr = useMemo(() => (totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0), [totalClicks, totalImpressions])
   const cpm = useMemo(() => (totalImpressions > 0 ? (totalInvestment / totalImpressions) * 1000 : 0), [totalInvestment, totalImpressions])
 
-  // Processar dados de benchmark (mantido para compatibilidade com outras páginas)
-  const benchmarkMap = useMemo(() => {
-    if (benchmarkData?.data) {
-      return processBenchmarkData(benchmarkData.data)
-    }
-    return new Map()
-  }, [benchmarkData])
-
   // Funções de formatação
   const formatCurrency = (value: number): string => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -441,68 +430,6 @@ const LinhaTempo: React.FC = () => {
     return `${value.toFixed(2).replace(".", ",")}%`
   }
 
-  // Função para mapear nome do veículo para matching
-  const normalizeVehicleName = (vehicle: string): string => {
-    const normalized = vehicle.toUpperCase().trim()
-    if (normalized === "META") return "META"
-    if (normalized === "TIKTOK" || normalized === "TIK TOK") return "TIK TOK"
-    return normalized
-  }
-
-  // Calcular métricas comparativas do benchmark baseado nos filtros
-  const benchmarkMetrics = useMemo(() => {
-    // Se não tiver dados, nem tenta calcular
-    if (benchmarkDataRaw.length === 0) {
-      return { custo: 0, impressoes: 0, cliques: 0, cpc: 0, ctr: 0, cpm: 0 }
-    }
-
-    console.log(`🔍 [DEBUG] Calculando Métricas. Filtros:`, { 
-      Veiculos: selectedVehicles, 
-      Modalidades: selectedModalidades 
-    })
-
-    // 1. Filtrar (lógica adaptada do CCBB-Flight2, usando modalidade ao invés de praca)
-    const filtered = benchmarkDataRaw.filter(item => {
-      // Normalização forçada para comparação (adaptada do CCBB-Flight2)
-      const itemVeiculo = normalizeVehicleName(item.veiculo)
-      const itemModalidade = item.modalidade.toLowerCase()
-      
-      // Verifica Veículo (usando normalização especial para META/TIKTOK)
-      const matchVehicle = selectedVehicles.length === 0 || 
-        selectedVehicles.some(v => normalizeVehicleName(v) === itemVeiculo)
-
-      // Verifica Modalidade (equivalente a "Verifica Praça" no CCBB-Flight2)
-      const matchModalidade = selectedModalidades.length === 0 || 
-        selectedModalidades.some(m => m.toLowerCase() === itemModalidade)
-      
-      return matchVehicle && matchModalidade
-    })
-
-    console.log(`📊 [DEBUG] Linhas restantes após filtro: ${filtered.length}`)
-    if (filtered.length === 0 && (selectedVehicles.length > 0 || selectedModalidades.length > 0)) {
-      console.warn(`⚠️ [DEBUG] ALERTA: Filtros ativos mas nenhuma linha encontrada!`)
-      console.log("Veículos disponíveis na base:", Array.from(new Set(benchmarkDataRaw.map(d => d.veiculo))))
-      console.log("Modalidades disponíveis na base:", Array.from(new Set(benchmarkDataRaw.map(d => d.modalidade))))
-    }
-
-    // 2. Somar Absolutos
-    const totalCusto = filtered.reduce((acc, item) => acc + item.custo, 0)
-    const totalImpressoes = filtered.reduce((acc, item) => acc + item.impressoes, 0)
-    const totalCliques = filtered.reduce((acc, item) => acc + item.cliques, 0)
-
-    console.log("💰 [DEBUG] Totais Calculados:", { totalCusto, totalImpressoes, totalCliques })
-
-    // 3. Calcular Taxas
-    return {
-      custo: totalCusto,
-      impressoes: totalImpressoes,
-      cliques: totalCliques,
-      cpc: totalCliques > 0 ? totalCusto / totalCliques : 0,
-      ctr: totalImpressoes > 0 ? (totalCliques / totalImpressoes) * 100 : 0,
-      cpm: totalImpressoes > 0 ? (totalCusto / totalImpressoes) * 1000 : 0
-    }
-  }, [benchmarkDataRaw, selectedVehicles, selectedModalidades])
-  
   // Função para formatar valores do eixo Y e tooltip
   const formatChartValue = (value: number): string => {
     if (["totalSpent", "cpm", "cpc"].includes(selectedMetric)) {
@@ -532,65 +459,6 @@ const LinhaTempo: React.FC = () => {
     })
   }
 
-  // Função auxiliar para renderizar comparativo (adaptada da lógica do CCBB-Flight2)
-  const renderComparison = (
-    currentValue: number, 
-    refValue: number, 
-    type: 'volume' | 'taxa' | 'custo' | 'investment', // Adicionado 'investment' para compatibilidade
-    formatFn: (v: number) => string
-  ) => {
-    if (refValue === 0) return <span className="text-xs text-gray-400 mt-1">Sem histórico</span>
-
-    let diff: number
-    let percentDiff: number
-    let isPositiveBad = false 
-    let label = ""
-    let customColor = "" // Variável para cor personalizada
-
-    if (type === 'volume') {
-      // Variação Percentual
-      diff = currentValue - refValue
-      percentDiff = ((currentValue / refValue) - 1) * 100
-      label = `${percentDiff > 0 ? "+" : ""}${percentDiff.toFixed(1)}%`
-      isPositiveBad = false
-    } else if (type === 'taxa') {
-      // Diferença em pontos percentuais
-      diff = currentValue - refValue
-      label = `${diff > 0 ? "+" : ""}${diff.toFixed(2)} p.p.`
-      isPositiveBad = false
-    } else if (type === 'investment') {
-      // Lógica para investimento (neutro - azul) - não será usado conforme instrução
-      diff = currentValue - refValue
-      label = `${diff > 0 ? "+" : ""}${formatCurrency(diff)}`
-      customColor = "text-blue-600" // Força a cor Azul Neutro
-    } else {
-      // Custo (CPC, CPM) - Vermelho/Verde mantido
-      diff = currentValue - refValue
-      label = `${diff > 0 ? "+" : ""}${formatCurrency(diff)}`
-      isPositiveBad = true 
-    }
-
-    // Define a classe de cor
-    let colorClass = ""
-    if (customColor) {
-        colorClass = customColor
-    } else {
-        const isGood = isPositiveBad ? diff < 0 : diff > 0
-        colorClass = isGood ? "text-green-600" : "text-red-600"
-    }
-
-    return (
-      <div className="flex flex-col items-start mt-1">
-        <span className={`text-xs font-bold ${colorClass}`}>
-          {label}
-        </span>
-        <span className="text-[10px] text-gray-500">
-          Ref: {formatFn(refValue)}
-        </span>
-      </div>
-    )
-  }
-
   useEffect(() => {
     if (processedData.length > 0) {
       const modalidadeSet = new Set<string>()
@@ -602,34 +470,6 @@ const LinhaTempo: React.FC = () => {
       setSelectedModalidades([])
     }
   }, [processedData])
-
-  // Effect para carregar dados brutos do benchmark
-  useEffect(() => {
-    const loadBenchmarkRaw = async () => {
-      console.log("🚀 [DEBUG] Iniciando fetch do Benchmark...")
-      try {
-        if (benchmarkData) {
-          console.log("📦 [DEBUG] Dados brutos da API:", benchmarkData)
-          
-          // A API pode retornar { data: { values: [...] } } ou { values: [...] }
-          const apiData = benchmarkData.data || benchmarkData
-          
-          if (apiData) {
-            const processed = processBenchmarkDataRaw(apiData)
-            console.log(`✅ [DEBUG] Total de linhas válidas carregadas: ${processed.length}`)
-            setBenchmarkDataRaw(processed)
-          } else {
-            console.warn("⚠️ [DEBUG] Estrutura de dados inválida - apiData não encontrado")
-          }
-        } else {
-          console.warn("⚠️ [DEBUG] benchmarkData não disponível ainda")
-        }
-      } catch (err) {
-        console.error("❌ [DEBUG] Erro fatal ao carregar Benchmark", err)
-      }
-    }
-    loadBenchmarkRaw()
-  }, [benchmarkData])
 
   if (isWeeklyAnalysis) {
     return (
@@ -782,7 +622,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Impressões</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalImpressions)}</p>
-              {renderComparison(totalImpressions, benchmarkMetrics.impressoes, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
@@ -793,7 +632,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Cliques</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalClicks)}</p>
-              {renderComparison(totalClicks, benchmarkMetrics.cliques, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
@@ -804,7 +642,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPC</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpc)}</p>
-              {renderComparison(cpc, benchmarkMetrics.cpc, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
@@ -815,7 +652,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CTR</p>
               <p className="text-xl font-bold text-gray-900">{formatPercentage(ctr)}</p>
-              {renderComparison(ctr, benchmarkMetrics.ctr, 'taxa', formatPercentage)}
             </div>
           </div>
         </div>
@@ -826,7 +662,6 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPM</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpm)}</p>
-              {renderComparison(cpm, benchmarkMetrics.cpm, 'custo', formatCurrency)}
             </div>
           </div>
         </div>

@@ -50,13 +50,12 @@ const menuItems: MenuItem[] = [
     path: "/visualizacoes",
     icon: <Eye className="w-5 h-5" />,
   },
-  // Temporariamente desativado
-  // {
-  //   id: "trafego-engajamento",
-  //   label: "Tráfego e Engajamento",
-  //   path: "/trafego-engajamento",
-  //   icon: <TrendingUp className="w-5 h-5" />,
-  // },
+  {
+    id: "trafego-engajamento",
+    label: "Tráfego e Engajamento",
+    path: "/trafego-engajamento",
+    icon: <TrendingUp className="w-5 h-5" />,
+  },
   {
     id: "criativos-meta",
     label: "Meta - Criativos",
