@@ -24,6 +24,15 @@ export interface BenchmarkDataRaw {
   cliques: number
 }
 
+// Nova interface para dados brutos de benchmark com estrutura correta (Modalidade primeiro)
+export interface BenchmarkRaw {
+  modalidade: string
+  veiculo: string
+  impressoes: number
+  cliques: number
+  cpm: number
+}
+
 // Função para buscar dados de benchmark
 export const fetchBenchmarkNacionalData = async () => {
   try {
@@ -206,6 +215,85 @@ export const processBenchmarkDataRaw = (apiData: any): BenchmarkDataRaw[] => {
   }
 
   return benchmarkDataRaw
+}
+
+// Função para processar dados brutos de benchmark com nova estrutura (Modalidade primeiro)
+export const processBenchmarkRawData = (apiData: any): BenchmarkRaw[] => {
+  const benchmarkRaw: BenchmarkRaw[] = []
+  
+  if (!apiData?.values) {
+    console.warn("⚠️ [DEBUG] Estrutura de dados inválida ou vazia recebida")
+    return benchmarkRaw
+  }
+
+  const headers = apiData.values[0]
+  const rows = apiData.values.slice(1) // Pular header
+  
+  console.log("📦 [DEBUG] Headers encontrados:", headers)
+  console.log("📦 [DEBUG] Total de linhas (sem header):", rows.length)
+  if (rows.length > 0) {
+    console.log("🧐 [DEBUG] Exemplo da primeira linha bruta:", rows[0])
+  }
+
+  rows.forEach((row: any[], index: number) => {
+    const parseNumber = (value: string | number) => {
+      if (!value || value === "") return 0
+      const stringValue = value.toString().trim()
+      // Remover R$, pontos de milhar, trocar vírgula por ponto
+      const cleanValue = stringValue.replace(/R\$\s*/g, "").replace(/\./g, "").replace(",", ".")
+      return Number.parseFloat(cleanValue) || 0
+    }
+
+    // Função auxiliar para buscar valor por nome da coluna (case-insensitive)
+    const getValueByColumnName = (columnNames: string[], defaultIndex: number): string => {
+      for (const colName of columnNames) {
+        if (headers && Array.isArray(headers)) {
+          const headerIndex = headers.findIndex((h: string) =>
+            h && h.toString().trim().toLowerCase() === colName.toLowerCase()
+          )
+          if (headerIndex >= 0 && row[headerIndex] !== undefined) {
+            return row[headerIndex]?.toString().trim() || ""
+          }
+        }
+      }
+      // Fallback para índice padrão
+      return row[defaultIndex]?.toString().trim() || ""
+    }
+
+    // Estrutura: [0] Modalidade, [1] VEÍCULO, [2] Impressões, [3] Cliques, [5] CPM
+    const modalidade = getValueByColumnName(["Modalidade", "modalidade"], 0).toLowerCase()
+    const veiculo = getValueByColumnName(["VEÍCULO", "Veículo", "veiculo"], 1).toUpperCase()
+    const impressoes = parseNumber(getValueByColumnName(["Impressões", "Impressoes", "impressões", "impressoes"], 2))
+    const cliques = parseNumber(getValueByColumnName(["Cliques", "cliques"], 3))
+    const cpm = parseNumber(getValueByColumnName(["CPM", "cpm"], 5))
+
+    if (index < 3) {
+      console.log(`📝 [DEBUG] Parse Linha ${index}:`, {
+        Modalidade: modalidade,
+        Veiculo: veiculo,
+        Impressoes: impressoes,
+        Cliques: cliques,
+        CPM: cpm
+      })
+    }
+
+    if (modalidade && veiculo) {
+      benchmarkRaw.push({
+        modalidade: modalidade.toLowerCase(),
+        veiculo: veiculo.toUpperCase(),
+        impressoes,
+        cliques,
+        cpm,
+      })
+    }
+  })
+
+  console.log(`✅ [DEBUG] Total de linhas válidas carregadas: ${benchmarkRaw.length}`)
+  if (benchmarkRaw.length > 0) {
+    console.log("🧐 [DEBUG] Amostra dos dados:", benchmarkRaw.slice(0, 3))
+  }
+
+  return benchmarkRaw
 }
 
 // Função para calcular variação

@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { ResponsiveLine } from "@nivo/line"
 import { Calendar, Filter, TrendingUp, Play, Info, DollarSign, MousePointer, Eye, BarChart3, Target, Percent, MapPin } from "lucide-react"
 import { useConsolidadoNacionalData } from "../../services/api"
+import { useBenchmarkNacionalData, processBenchmarkRawData, type BenchmarkRaw } from "../../services/benchmarkApi"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import AnaliseSemanal from "./components/AnaliseSemanal"
 import Loading from "../../components/Loading/Loading"
@@ -49,7 +50,9 @@ interface VehicleEntry {
 const LinhaTempo: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
   const { data: apiData, loading, error } = useConsolidadoNacionalData()
+  const { data: benchmarkData } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<DataPoint[]>([])
+  const [benchmarkRawData, setBenchmarkRawData] = useState<BenchmarkRaw[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [availableVehicles, setAvailableVehicles] = useState<string[]>([])
@@ -417,6 +420,135 @@ const LinhaTempo: React.FC = () => {
   const ctr = useMemo(() => (totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0), [totalClicks, totalImpressions])
   const cpm = useMemo(() => (totalImpressions > 0 ? (totalInvestment / totalImpressions) * 1000 : 0), [totalInvestment, totalImpressions])
 
+  // Função para normalizar nome do veículo para matching
+  const normalizeVehicleName = (vehicle: string): string => {
+    const normalized = vehicle.toUpperCase().trim()
+    if (normalized === "META") return "META"
+    if (normalized === "TIKTOK" || normalized === "TIK TOK") return "TIK TOK"
+    return normalized
+  }
+
+  // Calcular métricas comparativas do benchmark baseado nos filtros
+  const benchmarkMetrics = useMemo(() => {
+    // Se não tiver dados, nem tenta calcular
+    if (benchmarkRawData.length === 0) {
+      return { impressoes: 0, cliques: 0, cpc: 0, ctr: 0, cpm: 0 }
+    }
+
+    console.log(`🔍 [DEBUG] Calculando Métricas. Filtros:`, {
+      Veiculos: selectedVehicles,
+      Modalidades: selectedModalidades
+    })
+
+    // 1. Filtrar dados de benchmark baseado nos filtros selecionados
+    const filtered = benchmarkRawData.filter(item => {
+      // Normalização para comparação
+      const itemVeiculo = normalizeVehicleName(item.veiculo)
+      const itemModalidade = item.modalidade.toLowerCase()
+
+      // Verifica Veículo (se filtro vazio, considera todos)
+      const matchVehicle = selectedVehicles.length === 0 ||
+        selectedVehicles.some(v => normalizeVehicleName(v) === itemVeiculo)
+
+      // Verifica Modalidade (se filtro vazio, considera todas)
+      const matchModalidade = selectedModalidades.length === 0 ||
+        selectedModalidades.some(m => m.toLowerCase() === itemModalidade)
+
+      return matchVehicle && matchModalidade
+    })
+
+    console.log(`📊 [DEBUG] Linhas restantes após filtro: ${filtered.length}`)
+    if (filtered.length === 0 && (selectedVehicles.length > 0 || selectedModalidades.length > 0)) {
+      console.warn(`⚠️ [DEBUG] ALERTA: Filtros ativos mas nenhuma linha encontrada!`)
+      console.log("Veículos disponíveis na base:", Array.from(new Set(benchmarkRawData.map(d => d.veiculo))))
+      console.log("Modalidades disponíveis na base:", Array.from(new Set(benchmarkRawData.map(d => d.modalidade))))
+    }
+
+    // 2. Agregação Inteligente: Calcular custo derivado de cada linha e somar totais
+    let totalImpressoes = 0
+    let totalCliques = 0
+    let totalCustoDerivado = 0
+
+    filtered.forEach((item) => {
+      // Calcular custo derivado: CustoLinha = (impressoes * cpm) / 1000
+      const custoLinha = (item.impressoes * item.cpm) / 1000
+      
+      totalImpressoes += item.impressoes
+      totalCliques += item.cliques
+      totalCustoDerivado += custoLinha
+    })
+
+    console.log("💰 [DEBUG] Totais Calculados:", { 
+      totalImpressoes, 
+      totalCliques, 
+      totalCustoDerivado 
+    })
+
+    // 3. Calcular Taxas Finais Agregadas
+    const cpmComparativo = totalImpressoes > 0 ? (totalCustoDerivado / totalImpressoes) * 1000 : 0
+    const cpcComparativo = totalCliques > 0 ? totalCustoDerivado / totalCliques : 0
+    const ctrComparativo = totalImpressoes > 0 ? (totalCliques / totalImpressoes) * 100 : 0
+
+    return {
+      impressoes: totalImpressoes,
+      cliques: totalCliques,
+      cpc: cpcComparativo,
+      ctr: ctrComparativo,
+      cpm: cpmComparativo,
+    }
+  }, [benchmarkRawData, selectedVehicles, selectedModalidades])
+
+  // Função auxiliar para renderizar comparativo
+  const renderComparison = (
+    currentValue: number,
+    refValue: number,
+    type: 'volume' | 'taxa' | 'custo',
+    formatFn: (v: number) => string
+  ) => {
+    if (refValue === 0) return <span className="text-xs text-gray-400 mt-1">Sem histórico</span>
+
+    let diff: number
+    let percentDiff: number
+    let isPositiveBad = false // Flag para métricas onde aumento é ruim (Custo)
+    let label = ""
+
+    if (type === 'volume') {
+      // Variação Percentual ((Atual / Ref) - 1) * 100
+      diff = currentValue - refValue
+      percentDiff = ((currentValue / refValue) - 1) * 100
+      label = `${percentDiff > 0 ? "+" : ""}${percentDiff.toFixed(1)}%`
+      isPositiveBad = false // Mais impressões/cliques é bom (Verde)
+    } else if (type === 'taxa') {
+      // Diferença em pontos percentuais (Atual - Ref)
+      diff = currentValue - refValue
+      label = `${diff > 0 ? "+" : ""}${diff.toFixed(2)} p.p.`
+      isPositiveBad = false // Maior CTR é bom (Verde)
+    } else {
+      // Custo (CPC, CPM) - Diferença em Reais
+      diff = currentValue - refValue
+      label = `${diff > 0 ? "+" : ""}${formatCurrency(Math.abs(diff))}`
+      isPositiveBad = true // Custo maior é ruim (Vermelho)
+    }
+
+    // Lógica de Cores:
+    // Se type='custo' e diff > 0 (mais caro) -> Ruim (Vermelho)
+    // Se type='custo' e diff < 0 (mais barato) -> Bom (Verde)
+    // Se type!='custo' e diff > 0 (mais volume) -> Bom (Verde)
+    const isGood = isPositiveBad ? diff < 0 : diff > 0
+    const colorClass = isGood ? "text-green-600" : "text-red-600"
+
+    return (
+      <div className="flex flex-col items-start mt-1">
+        <span className={`text-xs font-bold ${colorClass}`}>
+          {label}
+        </span>
+        <span className="text-[10px] text-gray-500">
+          Ref: {formatFn(refValue)}
+        </span>
+      </div>
+    )
+  }
+
   // Funções de formatação
   const formatCurrency = (value: number): string => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -470,6 +602,34 @@ const LinhaTempo: React.FC = () => {
       setSelectedModalidades([])
     }
   }, [processedData])
+
+  // Effect para carregar dados brutos do benchmark
+  useEffect(() => {
+    const loadBenchmarkRaw = async () => {
+      console.log("🚀 [DEBUG] Iniciando fetch do Benchmark...")
+      try {
+        if (benchmarkData) {
+          console.log("📦 [DEBUG] Dados brutos da API:", benchmarkData)
+          
+          // A API pode retornar { data: { values: [...] } } ou { values: [...] }
+          const apiData = benchmarkData.data || benchmarkData
+          
+          if (apiData) {
+            const processed = processBenchmarkRawData(apiData)
+            console.log(`✅ [DEBUG] Total de linhas válidas carregadas: ${processed.length}`)
+            setBenchmarkRawData(processed)
+          } else {
+            console.warn("⚠️ [DEBUG] Estrutura de dados inválida - apiData não encontrado")
+          }
+        } else {
+          console.warn("⚠️ [DEBUG] benchmarkData não disponível ainda")
+        }
+      } catch (err) {
+        console.error("❌ [DEBUG] Erro fatal ao carregar Benchmark", err)
+      }
+    }
+    loadBenchmarkRaw()
+  }, [benchmarkData])
 
   if (isWeeklyAnalysis) {
     return (
@@ -622,6 +782,7 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Impressões</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalImpressions)}</p>
+              {renderComparison(totalImpressions, benchmarkMetrics.impressoes, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
@@ -632,6 +793,7 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Total de Cliques</p>
               <p className="text-xl font-bold text-gray-900">{formatFullNumber(totalClicks)}</p>
+              {renderComparison(totalClicks, benchmarkMetrics.cliques, 'volume', formatFullNumber)}
             </div>
           </div>
         </div>
@@ -642,6 +804,7 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPC</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpc)}</p>
+              {renderComparison(cpc, benchmarkMetrics.cpc, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
@@ -652,6 +815,7 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CTR</p>
               <p className="text-xl font-bold text-gray-900">{formatPercentage(ctr)}</p>
+              {renderComparison(ctr, benchmarkMetrics.ctr, 'taxa', formatPercentage)}
             </div>
           </div>
         </div>
@@ -662,6 +826,7 @@ const LinhaTempo: React.FC = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">CPM</p>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(cpm)}</p>
+              {renderComparison(cpm, benchmarkMetrics.cpm, 'custo', formatCurrency)}
             </div>
           </div>
         </div>
