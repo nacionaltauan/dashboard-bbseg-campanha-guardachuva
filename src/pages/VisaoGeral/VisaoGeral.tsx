@@ -939,8 +939,78 @@ const VisaoGeral: React.FC = () => {
       </div>
 
       {/* Card de Benchmarks - Posicionado no final */}
-      <div className="w-full">
+      <div className="w-full space-y-6">
         <BenchmarkCard />
+        
+        {/* Tabela de Dados de Benchmark */}
+        {benchmarkData?.data?.values && benchmarkData.data.values.length > 1 && (
+          <div className="card-overlay rounded-lg shadow-lg p-6">
+            <div className="text-lg font-semibold text-gray-800 mb-4">Tabela de Dados de Benchmark</div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {benchmarkData.data.values[0].map((header: string, index: number) => (
+                      <th
+                        key={index}
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200"
+                      >
+                        {header || `Coluna ${index + 1}`}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {benchmarkData.data.values.slice(1).map((row: any[], rowIndex: number) => (
+                    <tr key={rowIndex} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      {row.map((cell: any, cellIndex: number) => {
+                        const header = benchmarkData.data.values[0][cellIndex]?.toLowerCase() || ""
+                        const cellValue = cell?.toString() || ""
+                        
+                        // Formatação baseada no tipo de coluna
+                        let formattedValue = cellValue
+                        
+                        // Verificar se é um valor monetário (contém R$ ou é um número que deve ser formatado como moeda)
+                        if (header.includes("custo") || header.includes("cost") || header.includes("spent") || 
+                            header.includes("cpm") || header.includes("cpc")) {
+                          const numValue = parseFloat(cellValue.replace(/[R$\s.]/g, "").replace(",", "."))
+                          if (!isNaN(numValue)) {
+                            formattedValue = formatCurrency(numValue)
+                          }
+                        }
+                        // Verificar se é uma porcentagem
+                        else if (header.includes("ctr") || header.includes("vtr") || header.includes("completion") || 
+                                 header.includes("taxa") || header.includes("rate")) {
+                          const numValue = parseFloat(cellValue.replace(/[%\s]/g, "").replace(",", "."))
+                          if (!isNaN(numValue)) {
+                            formattedValue = `${numValue.toFixed(2)}%`
+                          }
+                        }
+                        // Verificar se é um número grande (impressões, cliques, etc)
+                        else if (header.includes("impress") || header.includes("click") || header.includes("clique") ||
+                                 header.includes("view") || header.includes("visualiz")) {
+                          const numValue = parseFloat(cellValue.replace(/[.\s]/g, "").replace(",", ""))
+                          if (!isNaN(numValue)) {
+                            formattedValue = numValue.toLocaleString("pt-BR")
+                          }
+                        }
+                        
+                        return (
+                          <td
+                            key={cellIndex}
+                            className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap border-b border-gray-200"
+                          >
+                            {formattedValue}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
