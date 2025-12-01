@@ -148,7 +148,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return index
   }
 
-  // Função para obter valores únicos da coluna Q
+  // Função para obter valores únicos da coluna Origem (Session source)
   const valoresColunaQ = useMemo(() => {
     if (!ga4ReceptivosData?.data?.values || ga4ReceptivosData.data.values.length <= 1) {
       return []
@@ -156,7 +156,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
-    const colunaQIndex = getColumnIndex(headers, "Origem") // Coluna Q
+    // Tentar "Session source" primeiro, depois "Session manual source"
+    let colunaQIndex = getColumnIndex(headers, "Session source")
+    if (colunaQIndex === -1) {
+      colunaQIndex = getColumnIndex(headers, "Session manual source")
+    }
 
     if (colunaQIndex === -1) return []
 
@@ -172,7 +176,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [ga4ReceptivosData])
 
-  // Função para obter valores únicos da coluna Modalidade da aba GA4_receptivos
+  // Função para obter valores únicos da coluna Modalidade (Region) da aba GA4_receptivos
   const valoresModalidadeGA4 = useMemo(() => {
     if (!ga4ReceptivosData?.data?.values || ga4ReceptivosData.data.values.length <= 1) {
       return []
@@ -180,7 +184,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
-    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    // Usar "Region" que é o nome real da coluna
+    const modalidadeIndex = getColumnIndex(headers, "Region")
 
     if (modalidadeIndex === -1) return []
 
@@ -197,27 +202,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
   }, [ga4ReceptivosData])
 
   // Função para obter valores únicos da coluna Modalidade da aba Eventos Receptivos
+  // Nota: A aba Eventos Receptivos não tem coluna Modalidade/Region, então retorna vazio
   const valoresModalidadeEventos = useMemo(() => {
-    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
-      return []
-    }
-
-    const headers = eventosReceptivosData.data.values[0]
-    const rows = eventosReceptivosData.data.values.slice(1)
-    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
-
-    if (modalidadeIndex === -1) return []
-
-    const valores = new Set<string>()
-
-    rows.forEach((row: any[]) => {
-      const valor = row[modalidadeIndex]?.toString().trim() || ""
-      if (valor) {
-        valores.add(valor)
-      }
-    })
-
-    return Array.from(valores).sort()
+    // A aba Eventos Receptivos não possui coluna Modalidade/Region
+    // Retornar array vazio
+    return []
   }, [eventosReceptivosData])
 
   // Valores únicos combinados de Modalidade
@@ -226,11 +215,21 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(combined).sort()
   }, [valoresModalidadeGA4, valoresModalidadeEventos])
 
-  // Função para verificar se a linha passa pelo filtro da coluna Q
+  // Função para verificar se a linha passa pelo filtro da coluna Q (Origem)
+  // Retorna true se a coluna não existir (não bloqueia os dados)
   const passaFiltroColunaQ = (row: any[], headers: string[]): boolean => {
     if (selectedColunaQ.length === 0) return true
     
-    const colunaQIndex = getColumnIndex(headers, "Origem") // Coluna Q
+    // Tentar diferentes nomes possíveis para a coluna Origem
+    let colunaQIndex = getColumnIndex(headers, "Origem")
+    if (colunaQIndex === -1) {
+      colunaQIndex = getColumnIndex(headers, "Session source")
+    }
+    if (colunaQIndex === -1) {
+      colunaQIndex = getColumnIndex(headers, "Session manual source")
+    }
+    
+    // Se a coluna não existir, não bloqueia (retorna true)
     if (colunaQIndex === -1) return true
     
     const valorColunaQ = row[colunaQIndex]?.toString().trim() || ""
@@ -239,10 +238,15 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
   }
 
   // Função para verificar se a linha passa pelo filtro de Modalidade
+  // Retorna true se a coluna não existir (não bloqueia os dados)
   const passaFiltroModalidade = (row: any[], headers: string[]): boolean => {
     if (selectedModalidade.length === 0) return true
     
-    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    // Usar "Region" que é o nome real da coluna na aba GA4_receptivos
+    // A aba Eventos Receptivos não tem essa coluna, então retorna true
+    let modalidadeIndex = getColumnIndex(headers, "Region")
+    
+    // Se a coluna não existir (ex: na aba Eventos Receptivos), não bloqueia (retorna true)
     if (modalidadeIndex === -1) return true
     
     const valorModalidade = row[modalidadeIndex]?.toString().trim() || ""
@@ -308,12 +312,22 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
 
-    // Índices das colunas usando nome da coluna
+    // Índices das colunas usando nome da coluna real
     const dateIndex = getColumnIndex(headers, "Date")
-    const plataformaIndex = getColumnIndex(headers, "Session source") // Coluna D
-    const sessionsIndex = getColumnIndex(headers, "Sessions") // Coluna I
+    // Tentar "Session source" primeiro, depois "Session manual source" como fallback
+    let plataformaIndex = getColumnIndex(headers, "Session source")
+    if (plataformaIndex === -1) {
+      plataformaIndex = getColumnIndex(headers, "Session manual source")
+    }
+    const sessionsIndex = getColumnIndex(headers, "Sessions")
 
     if (dateIndex === -1 || plataformaIndex === -1 || sessionsIndex === -1) {
+      console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas na aba GA4_receptivos:", {
+        dateIndex,
+        plataformaIndex,
+        sessionsIndex,
+        headers
+      })
       return {
         veiculosDetalhados: [],
         fontesPorPlataforma: {},
@@ -390,12 +404,18 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const headers = eventosReceptivosData.data.values[0]
     const rows = eventosReceptivosData.data.values.slice(1)
 
-    // Índices das colunas usando nome da coluna
+    // Índices das colunas usando nome da coluna real
     const dateIndex = getColumnIndex(headers, "Date")
-    const eventTypeIndex = getColumnIndex(headers, "Parâmetro Ação") // Coluna D
-    const eventCountIndex = getColumnIndex(headers, "Event count") // Coluna G
+    const eventNameIndex = getColumnIndex(headers, "Event name") // Coluna correta
+    const eventCountIndex = getColumnIndex(headers, "Event count")
 
-    if (dateIndex === -1 || eventTypeIndex === -1 || eventCountIndex === -1) {
+    if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
+      console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas na aba Eventos Receptivos:", {
+        dateIndex,
+        eventNameIndex,
+        eventCountIndex,
+        headers
+      })
       return {
         bbTrack: 0,
         firstVisit: 0,
@@ -414,16 +434,16 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro de Modalidade
+      // Aplicar filtro de Modalidade (não bloqueia se coluna não existir)
       if (!passaFiltroModalidade(row, headers)) {
         return
       }
 
-      const eventType = row[eventTypeIndex] || ""
+      const eventName = (row[eventNameIndex] || "").toString().trim()
       const eventCount = parseInt(row[eventCountIndex]) || 0
 
-      // Lógica: IF Coluna C = "botao-cta", THEN somar coluna F
-      if (eventType === "botao-cta") {
+      // Lógica: IF Event name = "botao-cta", THEN somar Event count
+      if (eventName === "botao-cta") {
         bbTrackTotal += eventCount
       }
     })
@@ -439,43 +459,43 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const ga4DateIndex = getColumnIndex(ga4Headers, "Date")
       console.log(`🔍 [DIAGNÓSTICO] Índice da coluna 'Date': ${ga4DateIndex}`)
       
-      // 2. Busca Flexível com Log
-      const termosPossiveis = [
-        "new users", 
-        "novos usuários", 
-        "first visit", 
-        "new users", 
-        "users",
-        "novos usuarios",
-        "first visits",
-        "new user"
-      ]
-      
+      // 2. Busca Flexível com Log - Buscar explicitamente "New users" (case-insensitive)
       let firstVisitIndex = -1
       let termoEncontrado = ""
       
-      for (const termo of termosPossiveis) {
-        firstVisitIndex = ga4Headers.findIndex((h: any) => {
-          if (!h) return false
-          const headerStr = h.toString().toLowerCase().trim()
-          return headerStr === termo || headerStr.includes(termo)
-        })
-        
-        if (firstVisitIndex !== -1) {
-          termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
-          break
-        }
-      }
+      // Busca case-insensitive para "New users"
+      firstVisitIndex = ga4Headers.findIndex((h: any) => {
+        if (!h) return false
+        const headerStr = h.toString().toLowerCase().trim()
+        return headerStr === "new users"
+      })
       
-      // Fallback: busca mais genérica
-      if (firstVisitIndex === -1) {
-        firstVisitIndex = ga4Headers.findIndex((h: any) => {
-          if (!h) return false
-          const headerStr = h.toString().toLowerCase().trim()
-          return headerStr.includes("new user") || headerStr.includes("first visit") || headerStr.includes("novos usu")
-        })
-        if (firstVisitIndex !== -1) {
-          termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
+      if (firstVisitIndex !== -1) {
+        termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
+      } else {
+        // Fallback: tentar variações
+        const termosPossiveis = [
+          "new users", 
+          "New Users", 
+          "NEW USERS",
+          "novos usuários", 
+          "Novos Usuários",
+          "first visit",
+          "First Visit",
+          "first visits"
+        ]
+        
+        for (const termo of termosPossiveis) {
+          firstVisitIndex = ga4Headers.findIndex((h: any) => {
+            if (!h) return false
+            const headerStr = h.toString().toLowerCase().trim()
+            return headerStr === termo.toLowerCase() || headerStr.includes(termo.toLowerCase())
+          })
+          
+          if (firstVisitIndex !== -1) {
+            termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
+            break
+          }
         }
       }
       
@@ -581,21 +601,18 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const headers = eventosReceptivosData.data.values[0]
     const rows = eventosReceptivosData.data.values.slice(1)
 
-    // Índices das colunas - tentar diferentes nomes possíveis
+    // Índices das colunas - usar nomes reais da estrutura
     const dateIndex = getColumnIndex(headers, "Date")
-    let eventNameIndex = getColumnIndex(headers, "Event name")
-    if (eventNameIndex === -1) {
-      eventNameIndex = getColumnIndex(headers, "Parâmetro Ação")
-    }
-    if (eventNameIndex === -1) {
-      eventNameIndex = getColumnIndex(headers, "Event Name")
-    }
-    let eventCountIndex = getColumnIndex(headers, "Event count")
-    if (eventCountIndex === -1) {
-      eventCountIndex = getColumnIndex(headers, "Event Count")
-    }
+    const eventNameIndex = getColumnIndex(headers, "Event name") // Nome correto da coluna
+    const eventCountIndex = getColumnIndex(headers, "Event count") // Nome correto da coluna
 
     if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
+      console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas em processedEventosEspecificos:", {
+        dateIndex,
+        eventNameIndex,
+        eventCountIndex,
+        headers
+      })
       return {
         btnCanaisFooter: 0,
         btnOuvidoria: 0,
