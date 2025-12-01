@@ -454,7 +454,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       
       let firstVisitIndex = -1
       for (const possibility of possibilities) {
-        firstVisitIndex = ga4Headers.findIndex((h) => {
+        firstVisitIndex = ga4Headers.findIndex((h: any) => {
           if (!h) return false
           const headerStr = h.toString().trim()
           return headerStr === possibility || headerStr.toLowerCase() === possibility.toLowerCase()
@@ -467,7 +467,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       
       // Fallback: busca case-insensitive mais genérica
       if (firstVisitIndex === -1) {
-        firstVisitIndex = ga4Headers.findIndex((h) => {
+        firstVisitIndex = ga4Headers.findIndex((h: any) => {
           if (!h) return false
           const headerStr = h.toString().toLowerCase().trim()
           return headerStr.includes("new user") || headerStr.includes("first visit") || headerStr.includes("novos usu")
