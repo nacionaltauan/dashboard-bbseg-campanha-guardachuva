@@ -148,26 +148,28 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return index
   }
 
-  // Função para obter valores únicos da coluna Origem (Session source)
-  const valoresColunaQ = useMemo(() => {
+  // Função para obter valores únicos da coluna "Origem" da aba GA4_receptivos
+  const valoresOrigemGA4 = useMemo(() => {
     if (!ga4ReceptivosData?.data?.values || ga4ReceptivosData.data.values.length <= 1) {
       return []
     }
 
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
-    // Tentar "Session source" primeiro, depois "Session manual source"
-    let colunaQIndex = getColumnIndex(headers, "Session source")
-    if (colunaQIndex === -1) {
-      colunaQIndex = getColumnIndex(headers, "Session manual source")
-    }
+    const origemIndex = getColumnIndex(headers, "Origem")
 
-    if (colunaQIndex === -1) return []
+    console.log("🔍 [DEBUG] Headers GA4 encontrados:", headers)
+    console.log("🔍 [DEBUG] Índice da coluna 'Origem' (GA4):", origemIndex)
+
+    if (origemIndex === -1) {
+      console.warn("⚠️ [DEBUG] Coluna 'Origem' não encontrada na aba GA4_receptivos")
+      return []
+    }
 
     const valores = new Set<string>()
 
     rows.forEach((row: any[]) => {
-      const valor = row[colunaQIndex]?.toString().trim() || ""
+      const valor = row[origemIndex]?.toString().trim() || ""
       if (valor) {
         valores.add(valor)
       }
@@ -176,7 +178,43 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [ga4ReceptivosData])
 
-  // Função para obter valores únicos da coluna Modalidade (Region) da aba GA4_receptivos
+  // Função para obter valores únicos da coluna "Origem" da aba Eventos Receptivos
+  const valoresOrigemEventos = useMemo(() => {
+    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
+      return []
+    }
+
+    const headers = eventosReceptivosData.data.values[0]
+    const rows = eventosReceptivosData.data.values.slice(1)
+    const origemIndex = getColumnIndex(headers, "Origem")
+
+    console.log("🔍 [DEBUG] Headers Eventos encontrados:", headers)
+    console.log("🔍 [DEBUG] Índice da coluna 'Origem' (Eventos):", origemIndex)
+
+    if (origemIndex === -1) {
+      console.warn("⚠️ [DEBUG] Coluna 'Origem' não encontrada na aba Eventos Receptivos")
+      return []
+    }
+
+    const valores = new Set<string>()
+
+    rows.forEach((row: any[]) => {
+      const valor = row[origemIndex]?.toString().trim() || ""
+      if (valor) {
+        valores.add(valor)
+      }
+    })
+
+    return Array.from(valores).sort()
+  }, [eventosReceptivosData])
+
+  // Valores únicos combinados de Origem
+  const valoresOrigem = useMemo(() => {
+    const combined = new Set([...valoresOrigemGA4, ...valoresOrigemEventos])
+    return Array.from(combined).sort()
+  }, [valoresOrigemGA4, valoresOrigemEventos])
+
+  // Função para obter valores únicos da coluna "Modalidade" da aba GA4_receptivos
   const valoresModalidadeGA4 = useMemo(() => {
     if (!ga4ReceptivosData?.data?.values || ga4ReceptivosData.data.values.length <= 1) {
       return []
@@ -184,10 +222,14 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
-    // Usar "Region" que é o nome real da coluna
-    const modalidadeIndex = getColumnIndex(headers, "Region")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
 
-    if (modalidadeIndex === -1) return []
+    console.log("🔍 [DEBUG] Índice da coluna 'Modalidade' (GA4):", modalidadeIndex)
+
+    if (modalidadeIndex === -1) {
+      console.warn("⚠️ [DEBUG] Coluna 'Modalidade' não encontrada na aba GA4_receptivos")
+      return []
+    }
 
     const valores = new Set<string>()
 
@@ -201,12 +243,33 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(valores).sort()
   }, [ga4ReceptivosData])
 
-  // Função para obter valores únicos da coluna Modalidade da aba Eventos Receptivos
-  // Nota: A aba Eventos Receptivos não tem coluna Modalidade/Region, então retorna vazio
+  // Função para obter valores únicos da coluna "Modalidade" da aba Eventos Receptivos
   const valoresModalidadeEventos = useMemo(() => {
-    // A aba Eventos Receptivos não possui coluna Modalidade/Region
-    // Retornar array vazio
-    return []
+    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
+      return []
+    }
+
+    const headers = eventosReceptivosData.data.values[0]
+    const rows = eventosReceptivosData.data.values.slice(1)
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+
+    console.log("🔍 [DEBUG] Índice da coluna 'Modalidade' (Eventos):", modalidadeIndex)
+
+    if (modalidadeIndex === -1) {
+      console.warn("⚠️ [DEBUG] Coluna 'Modalidade' não encontrada na aba Eventos Receptivos")
+      return []
+    }
+
+    const valores = new Set<string>()
+
+    rows.forEach((row: any[]) => {
+      const valor = row[modalidadeIndex]?.toString().trim() || ""
+      if (valor) {
+        valores.add(valor)
+      }
+    })
+
+    return Array.from(valores).sort()
   }, [eventosReceptivosData])
 
   // Valores únicos combinados de Modalidade
@@ -215,38 +278,27 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return Array.from(combined).sort()
   }, [valoresModalidadeGA4, valoresModalidadeEventos])
 
-  // Função para verificar se a linha passa pelo filtro da coluna Q (Origem)
-  // Retorna true se a coluna não existir (não bloqueia os dados)
-  const passaFiltroColunaQ = (row: any[], headers: string[]): boolean => {
+  // Função para verificar se a linha passa pelo filtro de Origem
+  const passaFiltroOrigem = (row: any[], headers: string[]): boolean => {
     if (selectedColunaQ.length === 0) return true
     
-    // Tentar diferentes nomes possíveis para a coluna Origem
-    let colunaQIndex = getColumnIndex(headers, "Origem")
-    if (colunaQIndex === -1) {
-      colunaQIndex = getColumnIndex(headers, "Session source")
-    }
-    if (colunaQIndex === -1) {
-      colunaQIndex = getColumnIndex(headers, "Session manual source")
-    }
+    const origemIndex = getColumnIndex(headers, "Origem")
     
     // Se a coluna não existir, não bloqueia (retorna true)
-    if (colunaQIndex === -1) return true
+    if (origemIndex === -1) return true
     
-    const valorColunaQ = row[colunaQIndex]?.toString().trim() || ""
+    const valorOrigem = row[origemIndex]?.toString().trim() || ""
     
-    return selectedColunaQ.includes(valorColunaQ)
+    return selectedColunaQ.includes(valorOrigem)
   }
 
   // Função para verificar se a linha passa pelo filtro de Modalidade
-  // Retorna true se a coluna não existir (não bloqueia os dados)
   const passaFiltroModalidade = (row: any[], headers: string[]): boolean => {
     if (selectedModalidade.length === 0) return true
     
-    // Usar "Region" que é o nome real da coluna na aba GA4_receptivos
-    // A aba Eventos Receptivos não tem essa coluna, então retorna true
-    let modalidadeIndex = getColumnIndex(headers, "Region")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
     
-    // Se a coluna não existir (ex: na aba Eventos Receptivos), não bloqueia (retorna true)
+    // Se a coluna não existir, não bloqueia (retorna true)
     if (modalidadeIndex === -1) return true
     
     const valorModalidade = row[modalidadeIndex]?.toString().trim() || ""
@@ -254,7 +306,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return selectedModalidade.includes(valorModalidade)
   }
 
-  // Função para alternar seleção do filtro da coluna Q
+  // Função para alternar seleção do filtro de Origem
   const toggleColunaQ = (valor: string) => {
     setSelectedColunaQ((prev) => {
       if (prev.includes(valor)) {
@@ -312,6 +364,9 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
 
+    // Log de debug dos headers
+    console.log("🔍 [DEBUG] Headers GA4_receptivos encontrados:", headers)
+    
     // Índices das colunas usando nome da coluna real
     const dateIndex = getColumnIndex(headers, "Date")
     // Tentar "Session source" primeiro, depois "Session manual source" como fallback
@@ -320,6 +375,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       plataformaIndex = getColumnIndex(headers, "Session manual source")
     }
     const sessionsIndex = getColumnIndex(headers, "Sessions")
+    
+    // Verificar índices das colunas de filtro
+    const origemIndex = getColumnIndex(headers, "Origem")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    console.log("🔍 [DEBUG] Índices de filtros (GA4): Origem=", origemIndex, "Modalidade=", modalidadeIndex)
 
     if (dateIndex === -1 || plataformaIndex === -1 || sessionsIndex === -1) {
       console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas na aba GA4_receptivos:", {
@@ -348,8 +408,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro da coluna Q
-      if (!passaFiltroColunaQ(row, headers)) {
+      // Aplicar filtro de Origem
+      if (!passaFiltroOrigem(row, headers)) {
         return
       }
 
@@ -434,7 +494,12 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro de Modalidade (não bloqueia se coluna não existir)
+      // Aplicar filtro de Origem
+      if (!passaFiltroOrigem(row, headers)) {
+        return
+      }
+
+      // Aplicar filtro de Modalidade
       if (!passaFiltroModalidade(row, headers)) {
         return
       }
@@ -523,10 +588,10 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
             return
           }
 
-          // Aplicar filtro da coluna Q
-          if (!passaFiltroColunaQ(row, ga4Headers)) {
+          // Aplicar filtro de Origem
+          if (!passaFiltroOrigem(row, ga4Headers)) {
             if (debugCount < 3) {
-              console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex} filtrada por COLUNA Q`)
+              console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex} filtrada por ORIGEM`)
             }
             return
           }
@@ -634,6 +699,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
+      // Aplicar filtro de Origem
+      if (!passaFiltroOrigem(row, headers)) {
+        return
+      }
+
       // Aplicar filtro de Modalidade
       if (!passaFiltroModalidade(row, headers)) {
         return
@@ -660,7 +730,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       btnSAC: btnSACTotal,
       preenchimentoForm: preenchimentoFormTotal,
     }
-  }, [eventosReceptivosData, dateRange, selectedModalidade])
+  }, [eventosReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
   const processedResumoData = useMemo(() => {
     
@@ -688,6 +758,9 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const headers = ga4ReceptivosData.data.values[0]
     const rows = ga4ReceptivosData.data.values.slice(1)
 
+    // Log de debug dos headers
+    console.log("🔍 [DEBUG] Headers GA4_receptivos (processedResumoData):", headers)
+    
     // Índices das colunas usando nome da coluna
     const dateIndex = getColumnIndex(headers, "Date")
     const regionIndex = getColumnIndex(headers, "Region") // Coluna E
@@ -696,6 +769,11 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const bouncesIndex = getColumnIndex(headers, "Bounces")
     const durationIndex = getColumnIndex(headers, "Average session duration")
     const engagedIndex = getColumnIndex(headers, "Engaged sessions")
+    
+    // Verificar índices das colunas de filtro
+    const origemIndex = getColumnIndex(headers, "Origem")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    console.log("🔍 [DEBUG] Índices de filtros (processedResumoData): Origem=", origemIndex, "Modalidade=", modalidadeIndex)
 
     if (dateIndex === -1 || regionIndex === -1 || deviceIndex === -1 || sessionsIndex === -1 || bouncesIndex === -1 || durationIndex === -1 || engagedIndex === -1) {
       return {
@@ -743,8 +821,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         return
       }
 
-      // Aplicar filtro da coluna Q
-      if (!passaFiltroColunaQ(row, headers)) {
+      // Aplicar filtro de Origem
+      if (!passaFiltroOrigem(row, headers)) {
         return
       }
 
@@ -965,14 +1043,14 @@ if (receptivosError || eventosError) {
             </div>
           </div>
 
-          {/* Filtro da Coluna Q */}
+          {/* Filtro de Origem */}
           <div className="col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
               <Filter className="w-4 h-4 mr-2" />
-              Filtro (Origem)
+              Origem
             </label>
             <div className="flex flex-wrap gap-2">
-              {valoresColunaQ.map((valor) => (
+              {valoresOrigem.map((valor) => (
                 <button
                   key={valor}
                   onClick={() => toggleColunaQ(valor)}
