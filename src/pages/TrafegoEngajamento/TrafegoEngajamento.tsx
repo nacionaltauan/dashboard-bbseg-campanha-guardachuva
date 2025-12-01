@@ -433,8 +433,51 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const ga4Headers = ga4ReceptivosData.data.values[0]
       const ga4Rows = ga4ReceptivosData.data.values.slice(1)
       
+      // Debug: Log dos headers para verificar o nome real da coluna
+      console.log("Headers GA4 Receptivos:", ga4Headers)
+      
       const ga4DateIndex = getColumnIndex(ga4Headers, "Date")
-      const firstVisitIndex = getColumnIndex(ga4Headers, "New users") // Coluna J
+      
+      // Busca flexível para a coluna First Visit / New users
+      const possibilities = [
+        "New users", 
+        "New Users", 
+        "new users", 
+        "Novos usuários", 
+        "Novos Usuários", 
+        "First visits",
+        "First Visits",
+        "first visits",
+        "Novos Usuarios",
+        "Novos usuarios"
+      ]
+      
+      let firstVisitIndex = -1
+      for (const possibility of possibilities) {
+        firstVisitIndex = ga4Headers.findIndex((h) => {
+          if (!h) return false
+          const headerStr = h.toString().trim()
+          return headerStr === possibility || headerStr.toLowerCase() === possibility.toLowerCase()
+        })
+        if (firstVisitIndex !== -1) {
+          console.log(`✅ Coluna First Visit encontrada: "${ga4Headers[firstVisitIndex]}" no índice ${firstVisitIndex}`)
+          break
+        }
+      }
+      
+      // Fallback: busca case-insensitive mais genérica
+      if (firstVisitIndex === -1) {
+        firstVisitIndex = ga4Headers.findIndex((h) => {
+          if (!h) return false
+          const headerStr = h.toString().toLowerCase().trim()
+          return headerStr.includes("new user") || headerStr.includes("first visit") || headerStr.includes("novos usu")
+        })
+        if (firstVisitIndex !== -1) {
+          console.log(`✅ Coluna First Visit encontrada (fallback): "${ga4Headers[firstVisitIndex]}" no índice ${firstVisitIndex}`)
+        } else {
+          console.warn("⚠️ Coluna First Visit/New users não encontrada. Headers disponíveis:", ga4Headers)
+        }
+      }
 
       if (ga4DateIndex !== -1 && firstVisitIndex !== -1) {
         ga4Rows.forEach((row: any[]) => {
