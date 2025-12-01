@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useMemo, useRef } from "react"
-import { TrendingUp, Calendar, Users, BarChart3, MessageCircle, HandHeart, Filter, MapPin, XCircle, TrendingDown, Clock } from "lucide-react"
+import { TrendingUp, Calendar, Users, BarChart3, MessageCircle, HandHeart, Filter, MapPin, XCircle, TrendingDown, Clock, Share2, Megaphone, Headphones, FileText } from "lucide-react"
 import Loading from "../../components/Loading/Loading"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import { 
@@ -128,10 +128,21 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return normalizedDate >= startDate && normalizedDate <= endDate
   }
 
-  // Função auxiliar para obter índice de coluna pelo nome
+  // Função auxiliar para obter índice de coluna pelo nome (case-insensitive)
   const getColumnIndex = (headers: string[], columnName: string): number => {
-    const index = headers.indexOf(columnName)
+    const index = headers.findIndex((h) => {
+      if (!h) return false
+      return h.toString().trim().toLowerCase() === columnName.toLowerCase()
+    })
     if (index === -1) {
+      // Tentar busca parcial também
+      const partialIndex = headers.findIndex((h) => {
+        if (!h) return false
+        return h.toString().trim().toLowerCase().includes(columnName.toLowerCase())
+      })
+      if (partialIndex !== -1) {
+        return partialIndex
+      }
       console.warn(`Coluna "${columnName}" não encontrada nos headers`)
     }
     return index
@@ -455,6 +466,84 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       totalCTAs: bbTrackTotal + firstVisitTotal,
     }
   }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
+
+  // Processamento dos eventos específicos da aba Eventos Receptivos
+  const processedEventosEspecificos = useMemo(() => {
+    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
+      return {
+        btnCanaisFooter: 0,
+        btnOuvidoria: 0,
+        btnSAC: 0,
+        preenchimentoForm: 0,
+      }
+    }
+
+    const headers = eventosReceptivosData.data.values[0]
+    const rows = eventosReceptivosData.data.values.slice(1)
+
+    // Índices das colunas - tentar diferentes nomes possíveis
+    const dateIndex = getColumnIndex(headers, "Date")
+    let eventNameIndex = getColumnIndex(headers, "Event name")
+    if (eventNameIndex === -1) {
+      eventNameIndex = getColumnIndex(headers, "Parâmetro Ação")
+    }
+    if (eventNameIndex === -1) {
+      eventNameIndex = getColumnIndex(headers, "Event Name")
+    }
+    let eventCountIndex = getColumnIndex(headers, "Event count")
+    if (eventCountIndex === -1) {
+      eventCountIndex = getColumnIndex(headers, "Event Count")
+    }
+
+    if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
+      return {
+        btnCanaisFooter: 0,
+        btnOuvidoria: 0,
+        btnSAC: 0,
+        preenchimentoForm: 0,
+      }
+    }
+
+    let btnCanaisFooterTotal = 0
+    let btnOuvidoriaTotal = 0
+    let btnSACTotal = 0
+    let preenchimentoFormTotal = 0
+
+    rows.forEach((row: any[]) => {
+      const date = row[dateIndex] || ""
+      
+      // Aplicar filtro de data
+      if (!isDateInRange(date)) {
+        return
+      }
+
+      // Aplicar filtro de Modalidade
+      if (!passaFiltroModalidade(row, headers)) {
+        return
+      }
+
+      const eventName = (row[eventNameIndex] || "").toString().trim()
+      const eventCount = parseInt(row[eventCountIndex]) || 0
+
+      // Filtrar e somar eventos específicos
+      if (eventName === "Button_Canais_Digitais_Footer") {
+        btnCanaisFooterTotal += eventCount
+      } else if (eventName === "Button_Ouv_Footer") {
+        btnOuvidoriaTotal += eventCount
+      } else if (eventName === "Button_SAC_Footer") {
+        btnSACTotal += eventCount
+      } else if (eventName === "preenchimento_form") {
+        preenchimentoFormTotal += eventCount
+      }
+    })
+
+    return {
+      btnCanaisFooter: btnCanaisFooterTotal,
+      btnOuvidoria: btnOuvidoriaTotal,
+      btnSAC: btnSACTotal,
+      preenchimentoForm: preenchimentoFormTotal,
+    }
+  }, [eventosReceptivosData, dateRange, selectedModalidade])
 
   const processedResumoData = useMemo(() => {
     
@@ -881,6 +970,57 @@ if (receptivosError || eventosError) {
                   </p>
                 </div>
                 <Clock className="w-6 h-6 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Nova linha de cards para eventos específicos */}
+          <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-600">Btn Canais footer</p>
+                  <p className="text-lg font-bold text-blue-900">
+                    {formatNumber(processedEventosEspecificos.btnCanaisFooter)}
+                  </p>
+                </div>
+                <Share2 className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-pink-600">Btn Ouvidoria</p>
+                  <p className="text-lg font-bold text-pink-900">
+                    {formatNumber(processedEventosEspecificos.btnOuvidoria)}
+                  </p>
+                </div>
+                <Megaphone className="w-6 h-6 text-pink-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-cyan-600">Btn SAC</p>
+                  <p className="text-lg font-bold text-cyan-900">
+                    {formatNumber(processedEventosEspecificos.btnSAC)}
+                  </p>
+                </div>
+                <Headphones className="w-6 h-6 text-cyan-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-amber-600">Preenchimento de formulário</p>
+                  <p className="text-lg font-bold text-amber-900">
+                    {formatNumber(processedEventosEspecificos.preenchimentoForm)}
+                  </p>
+                </div>
+                <FileText className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </div>
