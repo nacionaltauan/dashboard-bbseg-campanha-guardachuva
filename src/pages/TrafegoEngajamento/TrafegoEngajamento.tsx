@@ -433,39 +433,41 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const ga4Headers = ga4ReceptivosData.data.values[0]
       const ga4Rows = ga4ReceptivosData.data.values.slice(1)
       
-      // Debug: Log dos headers para verificar o nome real da coluna
-      console.log("Headers GA4 Receptivos:", ga4Headers)
+      // 1. Log de Headers
+      console.log("🔍 [DIAGNÓSTICO] Headers GA4 encontrados:", ga4Headers)
       
       const ga4DateIndex = getColumnIndex(ga4Headers, "Date")
+      console.log(`🔍 [DIAGNÓSTICO] Índice da coluna 'Date': ${ga4DateIndex}`)
       
-      // Busca flexível para a coluna First Visit / New users
-      const possibilities = [
-        "New users", 
-        "New Users", 
+      // 2. Busca Flexível com Log
+      const termosPossiveis = [
         "new users", 
-        "Novos usuários", 
-        "Novos Usuários", 
-        "First visits",
-        "First Visits",
+        "novos usuários", 
+        "first visit", 
+        "new users", 
+        "users",
+        "novos usuarios",
         "first visits",
-        "Novos Usuarios",
-        "Novos usuarios"
+        "new user"
       ]
       
       let firstVisitIndex = -1
-      for (const possibility of possibilities) {
+      let termoEncontrado = ""
+      
+      for (const termo of termosPossiveis) {
         firstVisitIndex = ga4Headers.findIndex((h: any) => {
           if (!h) return false
-          const headerStr = h.toString().trim()
-          return headerStr === possibility || headerStr.toLowerCase() === possibility.toLowerCase()
+          const headerStr = h.toString().toLowerCase().trim()
+          return headerStr === termo || headerStr.includes(termo)
         })
+        
         if (firstVisitIndex !== -1) {
-          console.log(`✅ Coluna First Visit encontrada: "${ga4Headers[firstVisitIndex]}" no índice ${firstVisitIndex}`)
+          termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
           break
         }
       }
       
-      // Fallback: busca case-insensitive mais genérica
+      // Fallback: busca mais genérica
       if (firstVisitIndex === -1) {
         firstVisitIndex = ga4Headers.findIndex((h: any) => {
           if (!h) return false
@@ -473,34 +475,89 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
           return headerStr.includes("new user") || headerStr.includes("first visit") || headerStr.includes("novos usu")
         })
         if (firstVisitIndex !== -1) {
-          console.log(`✅ Coluna First Visit encontrada (fallback): "${ga4Headers[firstVisitIndex]}" no índice ${firstVisitIndex}`)
-        } else {
-          console.warn("⚠️ Coluna First Visit/New users não encontrada. Headers disponíveis:", ga4Headers)
+          termoEncontrado = ga4Headers[firstVisitIndex]?.toString() || ""
         }
+      }
+      
+      console.log(`🔍 [DIAGNÓSTICO] Índice da coluna 'New users': ${firstVisitIndex}. Termo encontrado: ${firstVisitIndex !== -1 ? termoEncontrado : "NENHUM"}`)
+      
+      if (firstVisitIndex === -1) {
+        console.warn("⚠️ [DIAGNÓSTICO] Coluna First Visit/New users não encontrada. Headers disponíveis:", ga4Headers)
       }
 
       if (ga4DateIndex !== -1 && firstVisitIndex !== -1) {
-        ga4Rows.forEach((row: any[]) => {
+        let debugCount = 0
+        let totalLinhasProcessadas = 0
+        let totalLinhasFiltradas = 0
+        
+        console.log(`🔍 [DIAGNÓSTICO] Total de linhas para processar: ${ga4Rows.length}`)
+        
+        ga4Rows.forEach((row: any[], rowIndex: number) => {
           const date = row[ga4DateIndex] || ""
           
+          // 3. Amostragem de Dados - Log das primeiras 3 linhas que passam pelos filtros
           if (!isDateInRange(date)) {
+            if (debugCount < 3) {
+              console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex} filtrada por DATA: Data=${date}, Range=${dateRange.start} até ${dateRange.end}`)
+            }
             return
           }
 
           // Aplicar filtro da coluna Q
           if (!passaFiltroColunaQ(row, ga4Headers)) {
+            if (debugCount < 3) {
+              console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex} filtrada por COLUNA Q`)
+            }
             return
           }
 
           // Aplicar filtro de Modalidade
           if (!passaFiltroModalidade(row, ga4Headers)) {
+            if (debugCount < 3) {
+              console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex} filtrada por MODALIDADE`)
+            }
             return
           }
 
-          const firstVisitCount = parseInt(row[firstVisitIndex]) || 0
+          totalLinhasFiltradas++
+          
+          // 4. Verificação de Tipo - Log do valor antes do parseInt
+          const valorBruto = row[firstVisitIndex]
+          const tipoValor = typeof valorBruto
+          const valorString = valorBruto?.toString() || ""
+          
+          if (debugCount < 3) {
+            console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex}: Data=${date}, Valor Bruto Coluna[${firstVisitIndex}]=${JSON.stringify(valorBruto)}, Tipo=${tipoValor}, String="${valorString}"`)
+            debugCount++
+          }
+          
+          // Parse do valor
+          let firstVisitCount = 0
+          if (valorBruto !== null && valorBruto !== undefined && valorBruto !== "") {
+            // Tentar parse direto se for número
+            if (typeof valorBruto === "number") {
+              firstVisitCount = valorBruto
+            } else {
+              // Remover pontos de milhar e trocar vírgula por ponto
+              const cleanValue = valorString.replace(/\./g, "").replace(",", ".")
+              firstVisitCount = parseInt(cleanValue) || 0
+            }
+          }
+          
+          if (debugCount <= 3 && firstVisitCount > 0) {
+            console.log(`🔍 [DIAGNÓSTICO] Linha ${rowIndex}: Valor parseado=${firstVisitCount}`)
+          }
+          
           firstVisitTotal += firstVisitCount
+          totalLinhasProcessadas++
         })
+        
+        console.log(`🔍 [DIAGNÓSTICO] Resumo: Total linhas processadas=${totalLinhasProcessadas}, Total linhas filtradas=${totalLinhasFiltradas}, First Visit Total=${firstVisitTotal}`)
+      } else {
+        console.error("❌ [DIAGNÓSTICO] Não foi possível processar dados: ga4DateIndex=", ga4DateIndex, "firstVisitIndex=", firstVisitIndex)
       }
+    } else {
+      console.warn("⚠️ [DIAGNÓSTICO] Dados GA4 Receptivos não disponíveis ou estrutura incorreta")
     }
 
     return {
