@@ -12,6 +12,7 @@ import CreativeModal from "./components/CreativeModal"
 
 interface CreativeData {
   date: string
+  advertiserName: string
   campaignName: string
   adGroupName: string
   promotedPinName: string
@@ -105,11 +106,13 @@ const CriativosPinterest: React.FC = () => {
       const promotedPinName = get("Promoted Pin Name") || get("Pin promotion name") || get("promotedPinName") || ""
       const campaignName = get("Campaign name") || get("campaignName") || ""
       const adGroupName = get("Ad group name") || get("adGroupName") || ""
+      const advertiserName = get("Advertiser name") || get("advertiserName") || campaignName || ""
       const spend = get("Spend") || get("spendInMicroDollar") || get("Spend (in micro dollar)") || "0"
       const cost = spend.includes("micro") ? parseNumber(spend) / 1000000 : parseNumber(spend)
       
       return {
         date: get("Date") || "",
+        advertiserName,
         campaignName,
         adGroupName,
         promotedPinName,
