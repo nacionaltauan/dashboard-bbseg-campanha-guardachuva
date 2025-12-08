@@ -652,6 +652,60 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     }
   }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
+  // Constantes para eventos a excluir do cálculo de WhatsApp Flutuante (período <= 08/12/2025)
+  const EXCLUDED_RESIDENCIAL = [
+    "cta_quero_contratar_1",
+    "querocontratar1_sou_cliente_bb",
+    "querocontratar1_nao_sou_cliente_bb",
+    "btn_saiba_mais_esquerda",
+    "btn_saiba_mais_meio",
+    "btn_saiba_mais_direita",
+    "cta_quero_contratar_2",
+    "btn_faq_porque_vale_a_pena",
+    "btn_faq_que_tipos_de_assistencia",
+    "btn_faq_quais_planos",
+    "btn_faq_quando_posso_usar",
+    "btn_faq_como_acionar_o_seguro",
+    "btn_whatsapp_fundo",
+    "clique_instagram",
+    "clique_facebook",
+    "clique_youtube",
+    "clique_tiktok",
+    "clique_pinterest",
+    "clique_header_planos",
+    "clique_header_coberturas",
+    "clique_header_depoimentos",
+    "clique_header_faq"
+  ]
+
+  const EXCLUDED_VIDA = [
+    "cta_quero_contratar_1_vida",
+    "querocontratar1_sou_cliente_bb_vida",
+    "querocontratar1_nao_sou_cliente_bb_vida",
+    "btn_saiba_mais_esquerda_vida",
+    "btn_saiba_mais_meio_vida",
+    "btn_saiba_mais_direita_vida",
+    "cta_quero_contratar_2_vida",
+    "btn_faq_porque_vale_a_pena_vida",
+    "btn_faq_que_tipos_de_assistencia_vida",
+    "btn_faq_quais_planos_vida",
+    "btn_faq_quando_posso_usar_vida",
+    "btn_faq_como_acionar_o_seguro_vida",
+    "btn_whatsapp_fundo_vida",
+    "clique_instagram_vida",
+    "clique_facebook_vida",
+    "clique_youtube_vida",
+    "clique_tiktok_vida",
+    "clique_pinterest_vida",
+    "clique_header_planos_vida",
+    "clique_header_coberturas_vida",
+    "clique_header_depoimentos_vida",
+    "clique_header_faq_vida"
+  ]
+
+  // Data de corte para correção de tagueamento
+  const DATA_CORTE = "2025-12-08"
+
   // Função auxiliar para detectar qual modo de visualização está ativo
   const detectarModoVisualizacao = (): "default" | "residencial" | "vida" => {
     if (selectedModalidade.length === 0) {
@@ -700,7 +754,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     let btnQueroContratarPrincipal = 0
     let souClienteBB = 0
     let naoSouClienteBB = 0
-    let btnWppFlutuante = 0
+    let btnWppFlutuante = 0 // Período novo (> 08/12/2025)
+    let btnWppFlutuanteCalculado = 0 // Período antigo (<= 08/12/2025)
     let btnQueroContratar2 = 0
     let btnWppFundo = 0
     
@@ -708,40 +763,39 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     let btnQueroContratarPrincipalVida = 0
     let souClienteBBVida = 0
     let naoSouClienteBBVida = 0
-    let btnWppFlutuanteVida = 0
+    let btnWppFlutuanteVida = 0 // Período novo (> 08/12/2025)
+    let btnWppFlutuanteVidaCalculado = 0 // Período antigo (<= 08/12/2025)
     let btnQueroContratar2Vida = 0
     let btnWppFundoVida = 0
+    
+    // Contadores para internal_link_click (período antigo)
+    let internalLinkClickResidencial = 0
+    let internalLinkClickVida = 0
+    
+    // Contadores para soma de eventos excluídos (período antigo)
+    let somaExcluidosResidencial = 0
+    let somaExcluidosVida = 0
 
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
-      // Retornar estrutura baseada no modo
-      if (modo === "residencial") {
-        return {
-          modo: "residencial",
-          btnQueroContratarPrincipal,
-          souClienteBB,
-          naoSouClienteBB,
-          btnWppFlutuante,
-          btnQueroContratar2,
-          btnWppFundo,
-        }
-      } else if (modo === "vida") {
-        return {
-          modo: "vida",
-          btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
-          souClienteBB: souClienteBBVida,
-          naoSouClienteBB: naoSouClienteBBVida,
-          btnWppFlutuante: btnWppFlutuanteVida,
-          btnQueroContratar2: btnQueroContratar2Vida,
-          btnWppFundo: btnWppFundoVida,
-        }
-      } else {
-        return {
-          modo: "default",
-          btnCanaisFooter: btnCanaisFooterTotal,
-          btnOuvidoria: btnOuvidoriaTotal,
-          btnSAC: btnSACTotal,
-          preenchimentoForm: preenchimentoFormTotal,
-        }
+      // Retornar estrutura completa com todos os dados zerados
+      return {
+        modo,
+        btnCanaisFooter: btnCanaisFooterTotal,
+        btnOuvidoria: btnOuvidoriaTotal,
+        btnSAC: btnSACTotal,
+        preenchimentoForm: preenchimentoFormTotal,
+        btnQueroContratarPrincipal,
+        souClienteBB,
+        naoSouClienteBB,
+        btnWppFlutuante: 0, // Total = calculado + real (ambos zerados)
+        btnQueroContratar2,
+        btnWppFundo,
+        btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
+        souClienteBBVida: souClienteBBVida,
+        naoSouClienteBBVida: naoSouClienteBBVida,
+        btnWppFlutuanteVida: 0, // Total = calculado + real (ambos zerados)
+        btnQueroContratar2Vida: btnQueroContratar2Vida,
+        btnWppFundoVida: btnWppFundoVida,
       }
     }
 
@@ -752,6 +806,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const dateIndex = getColumnIndex(headers, "Date")
     const eventNameIndex = getColumnIndex(headers, "Event name")
     const eventCountIndex = getColumnIndex(headers, "Event count")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
 
     if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
       console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas em processedEventosEspecificos:", {
@@ -761,35 +816,25 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         headers
       })
       
-      // Retornar estrutura baseada no modo mesmo em caso de erro
-      if (modo === "residencial") {
-        return {
-          modo: "residencial",
-          btnQueroContratarPrincipal,
-          souClienteBB,
-          naoSouClienteBB,
-          btnWppFlutuante,
-          btnQueroContratar2,
-          btnWppFundo,
-        }
-      } else if (modo === "vida") {
-        return {
-          modo: "vida",
-          btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
-          souClienteBB: souClienteBBVida,
-          naoSouClienteBB: naoSouClienteBBVida,
-          btnWppFlutuante: btnWppFlutuanteVida,
-          btnQueroContratar2: btnQueroContratar2Vida,
-          btnWppFundo: btnWppFundoVida,
-        }
-      } else {
-        return {
-          modo: "default",
-          btnCanaisFooter: btnCanaisFooterTotal,
-          btnOuvidoria: btnOuvidoriaTotal,
-          btnSAC: btnSACTotal,
-          preenchimentoForm: preenchimentoFormTotal,
-        }
+      // Retornar estrutura completa com todos os dados zerados mesmo em caso de erro
+      return {
+        modo,
+        btnCanaisFooter: btnCanaisFooterTotal,
+        btnOuvidoria: btnOuvidoriaTotal,
+        btnSAC: btnSACTotal,
+        preenchimentoForm: preenchimentoFormTotal,
+        btnQueroContratarPrincipal,
+        souClienteBB,
+        naoSouClienteBB,
+        btnWppFlutuante: 0, // Total = calculado + real (ambos zerados)
+        btnQueroContratar2,
+        btnWppFundo,
+        btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
+        souClienteBBVida: souClienteBBVida,
+        naoSouClienteBBVida: naoSouClienteBBVida,
+        btnWppFlutuanteVida: 0, // Total = calculado + real (ambos zerados)
+        btnQueroContratar2Vida: btnQueroContratar2Vida,
+        btnWppFundoVida: btnWppFundoVida,
       }
     }
 
@@ -813,8 +858,21 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
       const eventName = (row[eventNameIndex] || "").toString().trim()
       const eventCount = parseInt(row[eventCountIndex]) || 0
+      
+      // Obter modalidade da linha (se disponível)
+      const modalidadeLinha = modalidadeIndex !== -1 
+        ? (row[modalidadeIndex] || "").toString().trim() 
+        : ""
+      
+      // Normalizar data para comparação
+      const normalizedDate = normalizeDate(date)
+      const isPeriodoAntigo = normalizedDate && normalizedDate <= DATA_CORTE
+      
+      // Determinar se é Residencial ou Vida baseado na modalidade da linha ou no modo selecionado
+      const isResidencial = modalidadeLinha === "Residencial" || (modo === "residencial" && modalidadeLinha === "")
+      const isVida = modalidadeLinha === "Vida" || (modo === "vida" && modalidadeLinha === "")
 
-      // Eventos padrão/Empresarial
+      // Eventos padrão/Empresarial (não afetados pela correção)
       if (eventName === "Button_Canais_Digitais_Footer") {
         btnCanaisFooterTotal += eventCount
       } else if (eventName === "Button_Ouv_Footer") {
@@ -826,65 +884,117 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       }
       
       // Eventos Residencial
-      if (eventName === "cta_quero_contratar_1") {
+      if (eventName === "cta_quero_contratar_1" && isResidencial) {
         btnQueroContratarPrincipal += eventCount
-      } else if (eventName === "querocontratar1_sou_cliente_bb") {
+        if (isPeriodoAntigo) {
+          somaExcluidosResidencial += eventCount
+        }
+      } else if (eventName === "querocontratar1_sou_cliente_bb" && isResidencial) {
         souClienteBB += eventCount
-      } else if (eventName === "querocontratar1_nao_sou_cliente_bb") {
+        if (isPeriodoAntigo) {
+          somaExcluidosResidencial += eventCount
+        }
+      } else if (eventName === "querocontratar1_nao_sou_cliente_bb" && isResidencial) {
         naoSouClienteBB += eventCount
-      } else if (eventName === "cta_quero_contratar_2") {
-        btnWppFlutuante += eventCount
-      } else if (eventName === "btn_whatsapp_flutuante") {
+        if (isPeriodoAntigo) {
+          somaExcluidosResidencial += eventCount
+        }
+      } else if (eventName === "btn_whatsapp_flutuante" && isResidencial) {
+        // Apenas contar se for período novo (> 08/12/2025)
+        if (!isPeriodoAntigo) {
+          btnWppFlutuante += eventCount
+        }
+      } else if (eventName === "cta_quero_contratar_2" && isResidencial) {
         btnQueroContratar2 += eventCount
-      } else if (eventName === "btn_whatsapp_fundo") {
+        if (isPeriodoAntigo) {
+          somaExcluidosResidencial += eventCount
+        }
+      } else if (eventName === "btn_whatsapp_fundo" && isResidencial) {
         btnWppFundo += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosResidencial += eventCount
+        }
+      } else if (isPeriodoAntigo && isResidencial && EXCLUDED_RESIDENCIAL.includes(eventName)) {
+        // Contar outros eventos excluídos do período antigo para Residencial
+        somaExcluidosResidencial += eventCount
+      } else if (isPeriodoAntigo && isResidencial && eventName === "internal_link_click") {
+        // Capturar internal_link_click do período antigo para Residencial
+        internalLinkClickResidencial += eventCount
       }
       
       // Eventos Vida
       if (eventName === "cta_quero_contratar_1_vida") {
         btnQueroContratarPrincipalVida += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosVida += eventCount
+        }
       } else if (eventName === "querocontratar1_sou_cliente_bb_vida") {
         souClienteBBVida += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosVida += eventCount
+        }
       } else if (eventName === "querocontratar1_nao_sou_cliente_bb_vida") {
         naoSouClienteBBVida += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosVida += eventCount
+        }
       } else if (eventName === "btn_whatsapp_flutuante_vida") {
-        btnWppFlutuanteVida += eventCount
+        // Apenas contar se for período novo (> 08/12/2025)
+        if (!isPeriodoAntigo) {
+          btnWppFlutuanteVida += eventCount
+        }
       } else if (eventName === "cta_quero_contratar_2_vida") {
         btnQueroContratar2Vida += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosVida += eventCount
+        }
       } else if (eventName === "btn_whatsapp_fundo_vida") {
         btnWppFundoVida += eventCount
+        if (isPeriodoAntigo) {
+          somaExcluidosVida += eventCount
+        }
+      } else if (isPeriodoAntigo && isVida && EXCLUDED_VIDA.includes(eventName)) {
+        // Contar outros eventos excluídos do período antigo para Vida
+        somaExcluidosVida += eventCount
+      } else if (isPeriodoAntigo && isVida && eventName === "internal_link_click") {
+        // Capturar internal_link_click do período antigo para Vida
+        internalLinkClickVida += eventCount
       }
     })
+    
+    // Calcular WhatsApp Flutuante para período antigo (Residencial)
+    // Fórmula: internal_link_click - (soma de todos os outros eventos)
+    btnWppFlutuanteCalculado = Math.max(0, internalLinkClickResidencial - somaExcluidosResidencial)
+    
+    // Calcular WhatsApp Flutuante para período antigo (Vida)
+    btnWppFlutuanteVidaCalculado = Math.max(0, internalLinkClickVida - somaExcluidosVida)
+    
+    // Total final = Calculado (passado) + Real (presente/futuro)
+    const btnWppFlutuanteTotal = btnWppFlutuanteCalculado + btnWppFlutuante
+    const btnWppFlutuanteVidaTotal = btnWppFlutuanteVidaCalculado + btnWppFlutuanteVida
 
-    // Retornar estrutura baseada no modo detectado
-    if (modo === "residencial") {
-      return {
-        modo: "residencial",
-        btnQueroContratarPrincipal,
-        souClienteBB,
-        naoSouClienteBB,
-        btnWppFlutuante,
-        btnQueroContratar2,
-        btnWppFundo,
-      }
-    } else if (modo === "vida") {
-      return {
-        modo: "vida",
-        btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
-        souClienteBB: souClienteBBVida,
-        naoSouClienteBB: naoSouClienteBBVida,
-        btnWppFlutuante: btnWppFlutuanteVida,
-        btnQueroContratar2: btnQueroContratar2Vida,
-        btnWppFundo: btnWppFundoVida,
-      }
-    } else {
-      return {
-        modo: "default",
-        btnCanaisFooter: btnCanaisFooterTotal,
-        btnOuvidoria: btnOuvidoriaTotal,
-        btnSAC: btnSACTotal,
-        preenchimentoForm: preenchimentoFormTotal,
-      }
+    // Retornar TODOS os dados para facilitar renderização condicional
+    return {
+      modo,
+      // Eventos padrão/Empresarial
+      btnCanaisFooter: btnCanaisFooterTotal,
+      btnOuvidoria: btnOuvidoriaTotal,
+      btnSAC: btnSACTotal,
+      preenchimentoForm: preenchimentoFormTotal,
+      // Eventos Residencial (btnWppFlutuante já inclui calculado + real)
+      btnQueroContratarPrincipal,
+      souClienteBB,
+      naoSouClienteBB,
+      btnWppFlutuante: btnWppFlutuanteTotal,
+      btnQueroContratar2,
+      btnWppFundo,
+      // Eventos Vida (btnWppFlutuanteVida já inclui calculado + real)
+      btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
+      souClienteBBVida: souClienteBBVida,
+      naoSouClienteBBVida: naoSouClienteBBVida,
+      btnWppFlutuanteVida: btnWppFlutuanteVidaTotal,
+      btnQueroContratar2Vida: btnQueroContratar2Vida,
+      btnWppFundoVida: btnWppFundoVida,
     }
   }, [eventosReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
@@ -1380,7 +1490,7 @@ if (receptivosError || eventosError) {
 
           {/* Cards para Modalidade Residencial */}
           {processedEventosEspecificos.modo === "residencial" && (
-            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1457,13 +1567,13 @@ if (receptivosError || eventosError) {
 
           {/* Cards para Modalidade Vida */}
           {processedEventosEspecificos.modo === "vida" && (
-            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-blue-600">Btn quero contratar principal</p>
                     <p className="text-lg font-bold text-blue-900">
-                      {formatNumber(processedEventosEspecificos.btnQueroContratarPrincipal || 0)}
+                      {formatNumber(processedEventosEspecificos.btnQueroContratarPrincipalVida || 0)}
                     </p>
                   </div>
                   <CheckCircle className="w-6 h-6 text-blue-600" />
@@ -1475,7 +1585,7 @@ if (receptivosError || eventosError) {
                   <div>
                     <p className="text-xs font-medium text-green-600">Sou cliente BB</p>
                     <p className="text-lg font-bold text-green-900">
-                      {formatNumber(processedEventosEspecificos.souClienteBB || 0)}
+                      {formatNumber(processedEventosEspecificos.souClienteBBVida || 0)}
                     </p>
                   </div>
                   <UserCheck className="w-6 h-6 text-green-600" />
@@ -1487,7 +1597,7 @@ if (receptivosError || eventosError) {
                   <div>
                     <p className="text-xs font-medium text-purple-600">N Sou cliente BB</p>
                     <p className="text-lg font-bold text-purple-900">
-                      {formatNumber(processedEventosEspecificos.naoSouClienteBB || 0)}
+                      {formatNumber(processedEventosEspecificos.naoSouClienteBBVida || 0)}
                     </p>
                   </div>
                   <UserCheck className="w-6 h-6 text-purple-600" />
@@ -1499,7 +1609,7 @@ if (receptivosError || eventosError) {
                   <div>
                     <p className="text-xs font-medium text-teal-600">Btn Wpp flutuante</p>
                     <p className="text-lg font-bold text-teal-900">
-                      {formatNumber(processedEventosEspecificos.btnWppFlutuante || 0)}
+                      {formatNumber(processedEventosEspecificos.btnWppFlutuanteVida || 0)}
                     </p>
                   </div>
                   <MessageCircle className="w-6 h-6 text-teal-600" />
@@ -1511,7 +1621,7 @@ if (receptivosError || eventosError) {
                   <div>
                     <p className="text-xs font-medium text-orange-600">Btn quero contratar 2</p>
                     <p className="text-lg font-bold text-orange-900">
-                      {formatNumber(processedEventosEspecificos.btnQueroContratar2 || 0)}
+                      {formatNumber(processedEventosEspecificos.btnQueroContratar2Vida || 0)}
                     </p>
                   </div>
                   <CheckCircle className="w-6 h-6 text-orange-600" />
@@ -1523,7 +1633,7 @@ if (receptivosError || eventosError) {
                   <div>
                     <p className="text-xs font-medium text-rose-600">Btn wpp fundo</p>
                     <p className="text-lg font-bold text-rose-900">
-                      {formatNumber(processedEventosEspecificos.btnWppFundo || 0)}
+                      {formatNumber(processedEventosEspecificos.btnWppFundoVida || 0)}
                     </p>
                   </div>
                   <MessageCircle className="w-6 h-6 text-rose-600" />
