@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Home, Clock, Globe, Eye, BarChart3, Users, LogOut, User, BookOpenText, Share2, Video, TrendingUp } from "lucide-react"
+import { Home, Clock, Globe, Eye, BarChart3, Users, LogOut, User, BookOpenText, Share2, Video, TrendingUp, Pin } from "lucide-react"
 import { useAuth } from "../../contexts/AuthContext"
 
 interface MenuItem {
@@ -76,7 +76,12 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
   },
-  
+  {
+    id: "criativos-pinterest",
+    label: "Pinterest - Criativos",
+    path: "/criativos-pinterest",
+    icon: <Pin className="w-5 h-5" />,
+  },
   {
     id: "glossario",
     label: "Glossário",

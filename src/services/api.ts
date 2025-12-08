@@ -956,7 +956,7 @@ export const fetchTikTokNacionalData = async () => {
 export const fetchPinterestNacionalData = async () => {
   try {
     const response = await apiNacional.get(
-      "/google/sheets/1tdFuCDyh1RDvhv9EGoZVJTBiHLSSOk-uUjp5rSbMUgg/data?range=Pinterest",
+      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Pinterest_tratado",
     )
     return response.data
   } catch (error) {
