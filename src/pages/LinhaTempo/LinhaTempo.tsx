@@ -435,9 +435,9 @@ const LinhaTempo: React.FC = () => {
       return { impressoes: 0, cliques: 0, cpc: 0, ctr: 0, cpm: 0 }
     }
 
-    console.log(`🔍 [DEBUG] Calculando Métricas. Filtros:`, {
-      Veiculos: selectedVehicles,
-      Modalidades: selectedModalidades
+    console.log(`🔍 [DEBUG] Calculando Métricas. Filtros:`, { 
+      Veiculos: selectedVehicles, 
+      Modalidades: selectedModalidades 
     })
 
     // 1. Filtrar dados de benchmark baseado nos filtros selecionados
@@ -445,15 +445,15 @@ const LinhaTempo: React.FC = () => {
       // Normalização para comparação
       const itemVeiculo = normalizeVehicleName(item.veiculo)
       const itemModalidade = item.modalidade.toLowerCase()
-
+      
       // Verifica Veículo (se filtro vazio, considera todos)
-      const matchVehicle = selectedVehicles.length === 0 ||
+      const matchVehicle = selectedVehicles.length === 0 || 
         selectedVehicles.some(v => normalizeVehicleName(v) === itemVeiculo)
 
       // Verifica Modalidade (se filtro vazio, considera todas)
-      const matchModalidade = selectedModalidades.length === 0 ||
+      const matchModalidade = selectedModalidades.length === 0 || 
         selectedModalidades.some(m => m.toLowerCase() === itemModalidade)
-
+      
       return matchVehicle && matchModalidade
     })
 
@@ -500,8 +500,8 @@ const LinhaTempo: React.FC = () => {
 
   // Função auxiliar para renderizar comparativo
   const renderComparison = (
-    currentValue: number,
-    refValue: number,
+    currentValue: number, 
+    refValue: number, 
     type: 'volume' | 'taxa' | 'custo',
     formatFn: (v: number) => string
   ) => {

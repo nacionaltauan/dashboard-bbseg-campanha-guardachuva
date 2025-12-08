@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useMemo, useRef } from "react"
-import { TrendingUp, Calendar, Users, BarChart3, MessageCircle, HandHeart, Filter, MapPin, XCircle, TrendingDown, Clock, Share2, Megaphone, Headphones, FileText } from "lucide-react"
+import { TrendingUp, Calendar, Users, BarChart3, MessageCircle, HandHeart, Filter, MapPin, XCircle, TrendingDown, Clock, Share2, Megaphone, Headphones, FileText, CheckCircle, UserCheck } from "lucide-react"
 import Loading from "../../components/Loading/Loading"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import { 
@@ -652,14 +652,96 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     }
   }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
+  // Função auxiliar para detectar qual modo de visualização está ativo
+  const detectarModoVisualizacao = (): "default" | "residencial" | "vida" => {
+    if (selectedModalidade.length === 0) {
+      return "default"
+    }
+    
+    // Se contém apenas "Residencial", retorna "residencial"
+    if (selectedModalidade.length === 1 && selectedModalidade[0] === "Residencial") {
+      return "residencial"
+    }
+    
+    // Se contém apenas "Vida", retorna "vida"
+    if (selectedModalidade.length === 1 && selectedModalidade[0] === "Vida") {
+      return "vida"
+    }
+    
+    // Se contém "Empresarial" ou múltiplas modalidades misturadas, retorna "default"
+    if (selectedModalidade.includes("Empresarial") || selectedModalidade.length > 1) {
+      return "default"
+    }
+    
+    // Se contém apenas "Residencial" (verificação adicional)
+    if (selectedModalidade.includes("Residencial") && !selectedModalidade.includes("Vida") && !selectedModalidade.includes("Empresarial")) {
+      return "residencial"
+    }
+    
+    // Se contém apenas "Vida" (verificação adicional)
+    if (selectedModalidade.includes("Vida") && !selectedModalidade.includes("Residencial") && !selectedModalidade.includes("Empresarial")) {
+      return "vida"
+    }
+    
+    return "default"
+  }
+
   // Processamento dos eventos específicos da aba Eventos Receptivos
   const processedEventosEspecificos = useMemo(() => {
+    const modo = detectarModoVisualizacao()
+    
+    // Inicializar todos os contadores possíveis
+    let btnCanaisFooterTotal = 0
+    let btnOuvidoriaTotal = 0
+    let btnSACTotal = 0
+    let preenchimentoFormTotal = 0
+    
+    // Contadores para Residencial
+    let btnQueroContratarPrincipal = 0
+    let souClienteBB = 0
+    let naoSouClienteBB = 0
+    let btnWppFlutuante = 0
+    let btnQueroContratar2 = 0
+    let btnWppFundo = 0
+    
+    // Contadores para Vida
+    let btnQueroContratarPrincipalVida = 0
+    let souClienteBBVida = 0
+    let naoSouClienteBBVida = 0
+    let btnWppFlutuanteVida = 0
+    let btnQueroContratar2Vida = 0
+    let btnWppFundoVida = 0
+
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
-      return {
-        btnCanaisFooter: 0,
-        btnOuvidoria: 0,
-        btnSAC: 0,
-        preenchimentoForm: 0,
+      // Retornar estrutura baseada no modo
+      if (modo === "residencial") {
+        return {
+          modo: "residencial",
+          btnQueroContratarPrincipal,
+          souClienteBB,
+          naoSouClienteBB,
+          btnWppFlutuante,
+          btnQueroContratar2,
+          btnWppFundo,
+        }
+      } else if (modo === "vida") {
+        return {
+          modo: "vida",
+          btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
+          souClienteBB: souClienteBBVida,
+          naoSouClienteBB: naoSouClienteBBVida,
+          btnWppFlutuante: btnWppFlutuanteVida,
+          btnQueroContratar2: btnQueroContratar2Vida,
+          btnWppFundo: btnWppFundoVida,
+        }
+      } else {
+        return {
+          modo: "default",
+          btnCanaisFooter: btnCanaisFooterTotal,
+          btnOuvidoria: btnOuvidoriaTotal,
+          btnSAC: btnSACTotal,
+          preenchimentoForm: preenchimentoFormTotal,
+        }
       }
     }
 
@@ -668,8 +750,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
     // Índices das colunas - usar nomes reais da estrutura
     const dateIndex = getColumnIndex(headers, "Date")
-    const eventNameIndex = getColumnIndex(headers, "Event name") // Nome correto da coluna
-    const eventCountIndex = getColumnIndex(headers, "Event count") // Nome correto da coluna
+    const eventNameIndex = getColumnIndex(headers, "Event name")
+    const eventCountIndex = getColumnIndex(headers, "Event count")
 
     if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
       console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas em processedEventosEspecificos:", {
@@ -678,18 +760,38 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         eventCountIndex,
         headers
       })
-      return {
-        btnCanaisFooter: 0,
-        btnOuvidoria: 0,
-        btnSAC: 0,
-        preenchimentoForm: 0,
+      
+      // Retornar estrutura baseada no modo mesmo em caso de erro
+      if (modo === "residencial") {
+        return {
+          modo: "residencial",
+          btnQueroContratarPrincipal,
+          souClienteBB,
+          naoSouClienteBB,
+          btnWppFlutuante,
+          btnQueroContratar2,
+          btnWppFundo,
+        }
+      } else if (modo === "vida") {
+        return {
+          modo: "vida",
+          btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
+          souClienteBB: souClienteBBVida,
+          naoSouClienteBB: naoSouClienteBBVida,
+          btnWppFlutuante: btnWppFlutuanteVida,
+          btnQueroContratar2: btnQueroContratar2Vida,
+          btnWppFundo: btnWppFundoVida,
+        }
+      } else {
+        return {
+          modo: "default",
+          btnCanaisFooter: btnCanaisFooterTotal,
+          btnOuvidoria: btnOuvidoriaTotal,
+          btnSAC: btnSACTotal,
+          preenchimentoForm: preenchimentoFormTotal,
+        }
       }
     }
-
-    let btnCanaisFooterTotal = 0
-    let btnOuvidoriaTotal = 0
-    let btnSACTotal = 0
-    let preenchimentoFormTotal = 0
 
     rows.forEach((row: any[]) => {
       const date = row[dateIndex] || ""
@@ -712,7 +814,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const eventName = (row[eventNameIndex] || "").toString().trim()
       const eventCount = parseInt(row[eventCountIndex]) || 0
 
-      // Filtrar e somar eventos específicos
+      // Eventos padrão/Empresarial
       if (eventName === "Button_Canais_Digitais_Footer") {
         btnCanaisFooterTotal += eventCount
       } else if (eventName === "Button_Ouv_Footer") {
@@ -722,13 +824,67 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       } else if (eventName === "preenchimento_form") {
         preenchimentoFormTotal += eventCount
       }
+      
+      // Eventos Residencial
+      if (eventName === "cta_quero_contratar_1") {
+        btnQueroContratarPrincipal += eventCount
+      } else if (eventName === "querocontratar1_sou_cliente_bb") {
+        souClienteBB += eventCount
+      } else if (eventName === "querocontratar1_nao_sou_cliente_bb") {
+        naoSouClienteBB += eventCount
+      } else if (eventName === "cta_quero_contratar_2") {
+        btnWppFlutuante += eventCount
+      } else if (eventName === "btn_whatsapp_flutuante") {
+        btnQueroContratar2 += eventCount
+      } else if (eventName === "btn_whatsapp_fundo") {
+        btnWppFundo += eventCount
+      }
+      
+      // Eventos Vida
+      if (eventName === "cta_quero_contratar_1_vida") {
+        btnQueroContratarPrincipalVida += eventCount
+      } else if (eventName === "querocontratar1_sou_cliente_bb_vida") {
+        souClienteBBVida += eventCount
+      } else if (eventName === "querocontratar1_nao_sou_cliente_bb_vida") {
+        naoSouClienteBBVida += eventCount
+      } else if (eventName === "btn_whatsapp_flutuante_vida") {
+        btnWppFlutuanteVida += eventCount
+      } else if (eventName === "cta_quero_contratar_2_vida") {
+        btnQueroContratar2Vida += eventCount
+      } else if (eventName === "btn_whatsapp_fundo_vida") {
+        btnWppFundoVida += eventCount
+      }
     })
 
-    return {
-      btnCanaisFooter: btnCanaisFooterTotal,
-      btnOuvidoria: btnOuvidoriaTotal,
-      btnSAC: btnSACTotal,
-      preenchimentoForm: preenchimentoFormTotal,
+    // Retornar estrutura baseada no modo detectado
+    if (modo === "residencial") {
+      return {
+        modo: "residencial",
+        btnQueroContratarPrincipal,
+        souClienteBB,
+        naoSouClienteBB,
+        btnWppFlutuante,
+        btnQueroContratar2,
+        btnWppFundo,
+      }
+    } else if (modo === "vida") {
+      return {
+        modo: "vida",
+        btnQueroContratarPrincipal: btnQueroContratarPrincipalVida,
+        souClienteBB: souClienteBBVida,
+        naoSouClienteBB: naoSouClienteBBVida,
+        btnWppFlutuante: btnWppFlutuanteVida,
+        btnQueroContratar2: btnQueroContratar2Vida,
+        btnWppFundo: btnWppFundoVida,
+      }
+    } else {
+      return {
+        modo: "default",
+        btnCanaisFooter: btnCanaisFooterTotal,
+        btnOuvidoria: btnOuvidoriaTotal,
+        btnSAC: btnSACTotal,
+        preenchimentoForm: preenchimentoFormTotal,
+      }
     }
   }, [eventosReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
@@ -760,7 +916,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
     // Log de debug dos headers
     console.log("🔍 [DEBUG] Headers GA4_receptivos (processedResumoData):", headers)
-    
+
     // Índices das colunas usando nome da coluna
     const dateIndex = getColumnIndex(headers, "Date")
     const regionIndex = getColumnIndex(headers, "Region") // Coluna E
@@ -1169,56 +1325,212 @@ if (receptivosError || eventosError) {
             </div>
           </div>
 
-          {/* Nova linha de cards para eventos específicos */}
-          <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-blue-600">Btn Canais footer</p>
-                  <p className="text-lg font-bold text-blue-900">
-                    {formatNumber(processedEventosEspecificos.btnCanaisFooter)}
-                  </p>
+          {/* Nova linha de cards para eventos específicos - Renderização Dinâmica */}
+          {processedEventosEspecificos.modo === "default" && (
+            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">Btn Canais footer</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {formatNumber(processedEventosEspecificos.btnCanaisFooter || 0)}
+                    </p>
+                  </div>
+                  <Share2 className="w-6 h-6 text-blue-600" />
                 </div>
-                <Share2 className="w-6 h-6 text-blue-600" />
               </div>
-            </div>
 
-            <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-pink-600">Btn Ouvidoria</p>
-                  <p className="text-lg font-bold text-pink-900">
-                    {formatNumber(processedEventosEspecificos.btnOuvidoria)}
-                  </p>
+              <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-pink-600">Btn Ouvidoria</p>
+                    <p className="text-lg font-bold text-pink-900">
+                      {formatNumber(processedEventosEspecificos.btnOuvidoria || 0)}
+                    </p>
+                  </div>
+                  <Megaphone className="w-6 h-6 text-pink-600" />
                 </div>
-                <Megaphone className="w-6 h-6 text-pink-600" />
               </div>
-            </div>
 
-            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-cyan-600">Btn SAC</p>
-                  <p className="text-lg font-bold text-cyan-900">
-                    {formatNumber(processedEventosEspecificos.btnSAC)}
-                  </p>
+              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-cyan-600">Btn SAC</p>
+                    <p className="text-lg font-bold text-cyan-900">
+                      {formatNumber(processedEventosEspecificos.btnSAC || 0)}
+                    </p>
+                  </div>
+                  <Headphones className="w-6 h-6 text-cyan-600" />
                 </div>
-                <Headphones className="w-6 h-6 text-cyan-600" />
               </div>
-            </div>
 
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-amber-600">Preenchimento de formulário</p>
-                  <p className="text-lg font-bold text-amber-900">
-                    {formatNumber(processedEventosEspecificos.preenchimentoForm)}
-                  </p>
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-amber-600">Preenchimento de formulário</p>
+                    <p className="text-lg font-bold text-amber-900">
+                      {formatNumber(processedEventosEspecificos.preenchimentoForm || 0)}
+                    </p>
+                  </div>
+                  <FileText className="w-6 h-6 text-amber-600" />
                 </div>
-                <FileText className="w-6 h-6 text-amber-600" />
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Cards para Modalidade Residencial */}
+          {processedEventosEspecificos.modo === "residencial" && (
+            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">Btn quero contratar principal</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {formatNumber(processedEventosEspecificos.btnQueroContratarPrincipal || 0)}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-green-600">Sou cliente BB</p>
+                    <p className="text-lg font-bold text-green-900">
+                      {formatNumber(processedEventosEspecificos.souClienteBB || 0)}
+                    </p>
+                  </div>
+                  <UserCheck className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-purple-600">N Sou cliente BB</p>
+                    <p className="text-lg font-bold text-purple-900">
+                      {formatNumber(processedEventosEspecificos.naoSouClienteBB || 0)}
+                    </p>
+                  </div>
+                  <UserCheck className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-teal-600">Btn Wpp flutuante</p>
+                    <p className="text-lg font-bold text-teal-900">
+                      {formatNumber(processedEventosEspecificos.btnWppFlutuante || 0)}
+                    </p>
+                  </div>
+                  <MessageCircle className="w-6 h-6 text-teal-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-orange-600">Btn quero contratar 2</p>
+                    <p className="text-lg font-bold text-orange-900">
+                      {formatNumber(processedEventosEspecificos.btnQueroContratar2 || 0)}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-rose-600">Btn wpp fundo</p>
+                    <p className="text-lg font-bold text-rose-900">
+                      {formatNumber(processedEventosEspecificos.btnWppFundo || 0)}
+                    </p>
+                  </div>
+                  <MessageCircle className="w-6 h-6 text-rose-600" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cards para Modalidade Vida */}
+          {processedEventosEspecificos.modo === "vida" && (
+            <div className="col-span-12 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">Btn quero contratar principal</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {formatNumber(processedEventosEspecificos.btnQueroContratarPrincipal || 0)}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-green-600">Sou cliente BB</p>
+                    <p className="text-lg font-bold text-green-900">
+                      {formatNumber(processedEventosEspecificos.souClienteBB || 0)}
+                    </p>
+                  </div>
+                  <UserCheck className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-purple-600">N Sou cliente BB</p>
+                    <p className="text-lg font-bold text-purple-900">
+                      {formatNumber(processedEventosEspecificos.naoSouClienteBB || 0)}
+                    </p>
+                  </div>
+                  <UserCheck className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-teal-600">Btn Wpp flutuante</p>
+                    <p className="text-lg font-bold text-teal-900">
+                      {formatNumber(processedEventosEspecificos.btnWppFlutuante || 0)}
+                    </p>
+                  </div>
+                  <MessageCircle className="w-6 h-6 text-teal-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-orange-600">Btn quero contratar 2</p>
+                    <p className="text-lg font-bold text-orange-900">
+                      {formatNumber(processedEventosEspecificos.btnQueroContratar2 || 0)}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-rose-600">Btn wpp fundo</p>
+                    <p className="text-lg font-bold text-rose-900">
+                      {formatNumber(processedEventosEspecificos.btnWppFundo || 0)}
+                    </p>
+                  </div>
+                  <MessageCircle className="w-6 h-6 text-rose-600" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Período selecionado - linha inferior */}
@@ -1315,7 +1627,7 @@ if (receptivosError || eventosError) {
       
       {/* GRID CONTAINER PARA OS CARDS */}
       <div className="grid grid-cols-1 gap-4">
-        
+
         {/* CARD FIRST VISIT */}
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
           <div className="flex items-center justify-between mb-2">

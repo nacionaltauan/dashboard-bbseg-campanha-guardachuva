@@ -212,9 +212,9 @@ const Visualizacoes: React.FC = () => {
             } else {
               // Se a coluna estiver vazia, tenta detectar a modalidade olhando para o campaignName
               if (campaignName.includes("| SP |")) modalidade = "São Paulo"
-              else if (campaignName.includes("| RJ |")) modalidade = "Rio de Janeiro"
-              else if (campaignName.includes("| MG |")) modalidade = "Minas Gerais"
-              else if (campaignName.includes("| RS |")) modalidade = "Rio Grande do Sul"
+            else if (campaignName.includes("| RJ |")) modalidade = "Rio de Janeiro"
+            else if (campaignName.includes("| MG |")) modalidade = "Minas Gerais"
+            else if (campaignName.includes("| RS |")) modalidade = "Rio Grande do Sul"
               else if (campaignName.includes("| PR |")) modalidade = "Paraná"
               else if (campaignName.includes("| SC |")) modalidade = "Santa Catarina"
               else if (campaignName.includes("| BA |")) modalidade = "Bahia"
@@ -223,7 +223,7 @@ const Visualizacoes: React.FC = () => {
               else if (campaignName.includes("| CE |")) modalidade = "Ceará"
               else if (campaignName.includes("| DF |")) modalidade = "Distrito Federal"
               else if (campaignName.includes("| ES |")) modalidade = "Espírito Santo"
-              else if (campaignName.includes("| NAC |")) modalidade = "Nacional"
+            else if (campaignName.includes("| NAC |")) modalidade = "Nacional"
               // Se não encontrar nada nem na coluna nem no nome da campanha, mantém "Nacional" como fallback
             }
 
