@@ -10,18 +10,19 @@ import Loading from "../../components/Loading/Loading"
 interface VehicleData {
   modalidade: string
   veiculo: string
-  mes: string
+  // mes: string // Comentado: Coluna mês foi removida da base de dados
   custoInvestido: number
   custoPrevisto: number
   tipoCompra: string
 }
 
-interface MesTotals {
-  mes: string
-  totalInvestido: number
-  totalPrevisto: number
-  pacing: number
-}
+// Comentado: Interface não é mais necessária pois a coluna mês foi removida da base de dados
+// interface MesTotals {
+//   mes: string
+//   totalInvestido: number
+//   totalPrevisto: number
+//   pacing: number
+// }
 
 interface CampaignSummary {
   totalInvestimentoPrevisto: number
@@ -44,9 +45,10 @@ const EstrategiaOnline: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null) 
   const { data: estrategiaData, loading, error } = useEstrategiaOnlineData()
   const [vehicleData, setVehicleData] = useState<VehicleData[]>([])
-  const [mesesTotals, setMesesTotals] = useState<MesTotals[]>([])
-  const [selectedMes, setSelectedMes] = useState<string | null>(null)
-  const [availableMeses, setAvailableMeses] = useState<string[]>([])
+  // Comentado: Estados relacionados a mês não são mais necessários pois a coluna mês foi removida da base de dados
+  // const [mesesTotals, setMesesTotals] = useState<MesTotals[]>([])
+  // const [selectedMes, setSelectedMes] = useState<string | null>(null)
+  // const [availableMeses, setAvailableMeses] = useState<string[]>([])
   const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
   const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
   const [campaignSummary, setCampaignSummary] = useState<CampaignSummary>({
@@ -117,42 +119,42 @@ const EstrategiaOnline: React.FC = () => {
           return {
             modalidade: row[0] || "", // Primeira coluna (Modalidade)
             veiculo: row[1] || "", // Segunda coluna (Veículo)
-            mes: row[2] || "", // Terceira coluna (MÊS)
+            // mes: row[2] || "", // Comentado: Coluna mês foi removida da base de dados
             custoInvestido,
             custoPrevisto,
             tipoCompra: row[5] || "", // Sexta coluna (Tipo de Compra)
           }
         })
-        .filter((vehicle: VehicleData) => vehicle.veiculo && vehicle.mes)
+        .filter((vehicle: VehicleData) => vehicle.veiculo) // Removida verificação de mês
 
-      // Calcular totais por mês
-      const mesMap: Record<string, MesTotals> = {}
-      processed.forEach((vehicle) => {
-        if (!mesMap[vehicle.mes]) {
-          mesMap[vehicle.mes] = {
-            mes: vehicle.mes,
-            totalInvestido: 0,
-            totalPrevisto: 0,
-            pacing: 0,
-          }
-        }
-        mesMap[vehicle.mes].totalInvestido += vehicle.custoInvestido
-        mesMap[vehicle.mes].totalPrevisto += vehicle.custoPrevisto
-      })
+      // Comentado: Cálculo de totais por mês não é mais necessário pois a coluna mês foi removida da base de dados
+      // const mesMap: Record<string, MesTotals> = {}
+      // processed.forEach((vehicle) => {
+      //   if (!mesMap[vehicle.mes]) {
+      //     mesMap[vehicle.mes] = {
+      //       mes: vehicle.mes,
+      //       totalInvestido: 0,
+      //       totalPrevisto: 0,
+      //       pacing: 0,
+      //     }
+      //   }
+      //   mesMap[vehicle.mes].totalInvestido += vehicle.custoInvestido
+      //   mesMap[vehicle.mes].totalPrevisto += vehicle.custoPrevisto
+      // })
 
-      // Calcular pacing dos meses
-      Object.values(mesMap).forEach((mes) => {
-        mes.pacing = mes.totalPrevisto > 0 ? (mes.totalInvestido / mes.totalPrevisto) * 100 : 0
-      })
+      // // Calcular pacing dos meses
+      // Object.values(mesMap).forEach((mes) => {
+      //   mes.pacing = mes.totalPrevisto > 0 ? (mes.totalInvestido / mes.totalPrevisto) * 100 : 0
+      // })
 
-      setMesesTotals(Object.values(mesMap))
+      // setMesesTotals(Object.values(mesMap))
       setVehicleData(processed)
 
-      // Extrair meses únicos
-      const meses = Array.from(new Set(processed.map((item) => item.mes)))
-        .filter(Boolean)
-        .sort()
-      setAvailableMeses(meses)
+      // Comentado: Extração de meses únicos não é mais necessária pois a coluna mês foi removida da base de dados
+      // const meses = Array.from(new Set(processed.map((item) => item.mes)))
+      //   .filter(Boolean)
+      //   .sort()
+      // setAvailableMeses(meses)
 
       // Extrair modalidades únicas
       const modalidades = Array.from(new Set(processed.map((item) => item.modalidade)))
@@ -168,7 +170,7 @@ const EstrategiaOnline: React.FC = () => {
         totalInvestimentoPrevisto: totalGeralPrevisto,
         totalCustoInvestido: totalGeralInvestido,
         pacingGeral: totalGeralPrevisto > 0 ? (totalGeralInvestido / totalGeralPrevisto) * 100 : 0,
-        mesesAtivos: meses.length,
+        mesesAtivos: 0, // Comentado: Não é mais possível calcular meses ativos pois a coluna mês foi removida da base de dados
       }
 
       setCampaignSummary(summary)
@@ -177,9 +179,11 @@ const EstrategiaOnline: React.FC = () => {
 
   // Dados agregados por veículo para a tabela
   const aggregatedVehicleData = useMemo(() => {
-    let filteredData = selectedMes ? vehicleData.filter((vehicle) => vehicle.mes === selectedMes) : vehicleData
+    // Comentado: Filtro por mês não é mais necessário pois a coluna mês foi removida da base de dados
+    // let filteredData = selectedMes ? vehicleData.filter((vehicle) => vehicle.mes === selectedMes) : vehicleData
+    let filteredData = vehicleData
     
-    // Aplicar filtro de praça
+    // Aplicar filtro de modalidade
     if (selectedModalidades.length > 0) {
       filteredData = filteredData.filter((vehicle) => selectedModalidades.includes(vehicle.modalidade))
     }
@@ -213,7 +217,7 @@ const EstrategiaOnline: React.FC = () => {
     })
 
     return Object.values(aggregated).sort((a, b) => b.custoPrevisto - a.custoPrevisto)
-  }, [vehicleData, selectedMes, selectedModalidades])
+  }, [vehicleData, selectedModalidades]) // Removido selectedMes das dependências
 
   // Calcular totais filtrados
   const filteredTotals = useMemo(() => {
@@ -275,11 +279,8 @@ const EstrategiaOnline: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 text-enhanced">Estratégia Online</h1>
             <div className="flex items-center space-x-2 text-gray-600">
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-4 h-4" />
-                <span className="text-sm font-medium">Por Meses</span>
-              </div>
-              <span className="text-sm">• Campanha Nacional</span>
+              {/* Comentado: Texto "Por Meses" removido pois a coluna mês foi removida da base de dados */}
+              <span className="text-sm">Campanha Nacional</span>
             </div>
           </div>
         </div>
@@ -317,7 +318,7 @@ const EstrategiaOnline: React.FC = () => {
       </div>
 
       {/* Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Investimento Previsto */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center justify-between">
@@ -353,8 +354,8 @@ const EstrategiaOnline: React.FC = () => {
           </div>
         </div>
 
-        {/* Meses Ativos */}
-        <div className="card-overlay rounded-lg shadow-lg p-4">
+        {/* Meses Ativos - Comentado: Card não é mais relevante pois a coluna mês foi removida da base de dados */}
+        {/* <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Meses Ativos</p>
@@ -362,11 +363,12 @@ const EstrategiaOnline: React.FC = () => {
             </div>
             <Calendar className="w-8 h-8 text-orange-600" />
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Resumo por Mês - Cards Clicáveis */}
-      <div className="card-overlay rounded-lg shadow-lg p-6">
+      {/* Comentado: Esta seção foi ocultada pois a campanha terá acompanhamento de verba apenas separado por veículo e modalidade */}
+      {/* <div className="card-overlay rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Resumo por Mês</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {mesesTotals.map((mes, index) => (
@@ -418,16 +420,20 @@ const EstrategiaOnline: React.FC = () => {
             </button>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Tabela de Veículos Agregados */}
       <div className="flex-1 card-overlay rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            Estratégia e Execução {selectedMes && `- ${selectedMes.toUpperCase()}`}
+            Estratégia e Execução
+            {/* Comentado: Exibição do mês selecionado removida pois a coluna mês foi removida da base de dados */}
+            {/* {selectedMes && `- ${selectedMes.toUpperCase()}`} */}
           </h2>
           <div className="text-sm text-gray-500">
-            {selectedMes ? `Dados do mês ${selectedMes.toUpperCase()}` : "Dados agregados de todos os meses"}
+            Dados agregados por veículo e modalidade
+            {/* Comentado: Texto dinâmico baseado em mês removido pois a coluna mês foi removida da base de dados */}
+            {/* {selectedMes ? `Dados do mês ${selectedMes.toUpperCase()}` : "Dados agregados de todos os meses"} */}
           </div>
         </div>
 
