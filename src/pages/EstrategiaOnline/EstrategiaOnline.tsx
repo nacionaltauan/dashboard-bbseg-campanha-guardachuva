@@ -10,7 +10,7 @@ import Loading from "../../components/Loading/Loading"
 interface VehicleData {
   modalidade: string
   veiculo: string
-  // mes: string // Comentado: Coluna mês foi removida da base de dados
+  mes: string // Valor estático "Geral" pois a coluna mês foi removida da base de dados
   custoInvestido: number
   custoPrevisto: number
   tipoCompra: string
@@ -111,18 +111,40 @@ const EstrategiaOnline: React.FC = () => {
       const headers = estrategiaData.data.values[0]
       const rows = estrategiaData.data.values.slice(1)
 
+      // Mapeamento dinâmico: encontrar índices das colunas pelos nomes
+      const idxModalidade = headers.findIndex((h: string) => h === "Modalidade")
+      const idxVeiculo = headers.findIndex((h: string) => h === "Veículo")
+      const idxCustoInvestido = headers.findIndex((h: string) => h === "Custo Investido")
+      const idxCustoPrevisto = headers.findIndex((h: string) => h === "Custo Previsto")
+      const idxTipoCompra = headers.findIndex((h: string) => h === "Tipo de Compra")
+
+      // Função auxiliar para obter valor seguro de uma coluna
+      const getColumnValue = (row: any[], index: number, defaultValue: string | number = ""): string | number => {
+        if (index === -1) return defaultValue
+        const value = row[index]
+        return value !== undefined && value !== null && value !== "" ? value : defaultValue
+      }
+
       const processed: VehicleData[] = rows
         .map((row: any[]) => {
-          const custoInvestido = parseMonetaryValue(row[3]) // Coluna "Custo Investido" (D)
-          const custoPrevisto = parseMonetaryValue(row[4]) // Coluna "Custo Previsto" (E)
+          // Extrair valores usando índices dinâmicos
+          const modalidade = getColumnValue(row, idxModalidade, "") as string
+          const veiculo = getColumnValue(row, idxVeiculo, "") as string
+          const tipoCompra = getColumnValue(row, idxTipoCompra, "") as string
+          
+          // Processar valores monetários com segurança
+          const custoInvestidoRaw = idxCustoInvestido !== -1 ? row[idxCustoInvestido] : ""
+          const custoPrevistoRaw = idxCustoPrevisto !== -1 ? row[idxCustoPrevisto] : ""
+          const custoInvestido = parseMonetaryValue(custoInvestidoRaw || "0")
+          const custoPrevisto = parseMonetaryValue(custoPrevistoRaw || "0")
 
           return {
-            modalidade: row[0] || "", // Primeira coluna (Modalidade)
-            veiculo: row[1] || "", // Segunda coluna (Veículo)
-            // mes: row[2] || "", // Comentado: Coluna mês foi removida da base de dados
+            modalidade,
+            veiculo,
+            mes: "Geral", // Valor estático pois a coluna mês foi removida da base de dados
             custoInvestido,
             custoPrevisto,
-            tipoCompra: row[5] || "", // Sexta coluna (Tipo de Compra)
+            tipoCompra,
           }
         })
         .filter((vehicle: VehicleData) => vehicle.veiculo) // Removida verificação de mês
