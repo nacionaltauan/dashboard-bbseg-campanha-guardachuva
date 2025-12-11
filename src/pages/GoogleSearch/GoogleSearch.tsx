@@ -38,9 +38,27 @@ const GoogleSearch: React.FC = () => {
   const parseNumber = (value: any): number => {
     if (typeof value === 'number') return value
     if (!value) return 0
-    // Remove R$, %, espaços e converte , para .
-    const clean = value.toString().replace(/[R$%\s]/g, '').replace(',', '.')
-    const parsed = parseFloat(clean)
+    
+    let str = value.toString().trim()
+    
+    // Remove R$, % e espaços
+    str = str.replace(/[R$%\s]/g, '')
+    
+    // Lógica para formato PT-BR (1.234,56) vs EN-US (1,234.56)
+    // Assumindo prioridade para PT-BR dado o contexto do projeto
+    if (str.includes(',')) {
+      // Se tem vírgula, ela é o decimal. Removemos pontos de milhar.
+      str = str.replace(/\./g, '').replace(',', '.')
+    } else if (str.includes('.')) {
+      // Se tem ponto e não tem vírgula:
+      // Pode ser 1.000 (mil) ou 1.5 (um e meio).
+      // Dado que impressões/cliques são inteiros, 1.000 é mil.
+      // CTR geralmente vem com vírgula ou % em PT-BR (1,5%).
+      // Vamos assumir que ponto é separador de milhar e remover.
+      str = str.replace(/\./g, '')
+    }
+    
+    const parsed = parseFloat(str)
     return isNaN(parsed) ? 0 : parsed
   }
 
