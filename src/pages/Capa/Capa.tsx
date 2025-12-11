@@ -15,6 +15,7 @@ import {
   Share2,
   Video,
   TrendingUp,
+  Search,
 } from "lucide-react"
 
 interface NavigationCard {
@@ -90,6 +91,13 @@ const navigationCards: NavigationCard[] = [
       </svg>
     ),
     color: "bg-pink-600",
+  },
+  {
+    title: "Google Search",
+    description: "Performance das palavras chave em Search Google",
+    path: "/google-search",
+    icon: <Search className="w-6 h-6" />,
+    color: "bg-blue-500",
   },
   {
     title: "Glossário",

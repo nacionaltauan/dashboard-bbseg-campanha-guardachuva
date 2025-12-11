@@ -13,6 +13,7 @@ import Visualizacoes from "./pages/Visualizacoes/Visualizacoes"
 import CriativosTikTok from "./pages/CriativosTikTok/CriativosTikTok"
 import CriativosMeta from "./pages/CriativosMetaAds/CriativosMetaAds"
 import CriativosPinterest from "./pages/CriativosPinterest/CriativosPinterest"
+import GoogleSearch from "./pages/GoogleSearch/GoogleSearch"
 import Glossario from "./pages/Glossario/Glossario" // Nova importação para Glossario
 import "./App.css"
 import TrafegoEngajamento from "./pages/TrafegoEngajamento/TrafegoEngajamento"
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} />
                 <Route path="/criativos-meta" element={<CriativosMeta />} />
                 <Route path="/criativos-tiktok" element={<CriativosTikTok />} />
+                <Route path="/google-search" element={<GoogleSearch />} />
                 <Route path="/criativos-pinterest" element={<CriativosPinterest />} />
                 <Route path="/glossario" element={<Glossario />} /> {/* Nova rota para Glossario */}
               </Routes>
