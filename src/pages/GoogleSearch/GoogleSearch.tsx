@@ -66,16 +66,13 @@ const GoogleSearch: React.FC = () => {
 
   // Processamento dos dados da API
   useEffect(() => {
-    // 1. Log Inicial
-    console.log("DEBUG - Dados brutos da API:", apiData)
+    // Tenta acessar values diretamente ou dentro da propriedade data (estrutura aninhada)
+    const values = apiData?.values || apiData?.data?.values
 
-    if (apiData?.values && Array.isArray(apiData.values) && apiData.values.length > 1) {
-      const headers = apiData.values[0]
-      const rows = apiData.values.slice(1)
+    if (values && Array.isArray(values) && values.length > 1) {
+      const headers = values[0]
+      const rows = values.slice(1)
       
-      // 2. Log de Cabeçalhos
-      console.log("DEBUG - Headers encontrados na planilha:", headers)
-
       // Mapeamento dinâmico de índices (PT/EN)
       const idxDate = headers.findIndex((h: string) => ["Date", "Day", "Dia", "Data"].includes(h))
       const idxCampaign = headers.findIndex((h: string) => ["Campaign name", "Campanha"].includes(h))
@@ -84,11 +81,6 @@ const GoogleSearch: React.FC = () => {
       const idxImpressions = headers.findIndex((h: string) => ["Impressions", "Impr.", "Impressões"].includes(h))
       const idxClicks = headers.findIndex((h: string) => ["Clicks", "Cliques"].includes(h))
       const idxCtr = headers.findIndex((h: string) => ["CTR"].includes(h))
-      
-      // 3. Log de Índices
-      console.log("DEBUG - Mapeamento de Colunas:", {
-        idxDate, idxCampaign, idxAdGroup, idxKeyword, idxImpressions, idxClicks, idxCtr
-      })
       
       const processed: KeywordData[] = rows.map((row: any[]) => {
         return {
