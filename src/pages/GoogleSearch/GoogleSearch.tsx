@@ -70,14 +70,16 @@ const GoogleSearch: React.FC = () => {
       const headers = apiData.values[0]
       const rows = apiData.values.slice(1)
       
-      // Mapeamento dinâmico de índices
-      const idxDate = headers.findIndex((h: string) => h === "Date" || h === "Day")
-      const idxCampaign = headers.findIndex((h: string) => h === "Campaign name")
-      const idxAdGroup = headers.findIndex((h: string) => h === "Ad group name")
-      const idxKeyword = headers.findIndex((h: string) => h === "Keyword" || h === "Search keyword")
-      const idxImpressions = headers.findIndex((h: string) => h === "Impressions")
-      const idxClicks = headers.findIndex((h: string) => h === "Clicks")
-      const idxCtr = headers.findIndex((h: string) => h === "CTR")
+      console.log("Headers encontrados:", headers)
+
+      // Mapeamento dinâmico de índices (PT/EN)
+      const idxDate = headers.findIndex((h: string) => ["Date", "Day", "Dia", "Data"].includes(h))
+      const idxCampaign = headers.findIndex((h: string) => ["Campaign name", "Campanha"].includes(h))
+      const idxAdGroup = headers.findIndex((h: string) => ["Ad group name", "Grupo de anúncios"].includes(h))
+      const idxKeyword = headers.findIndex((h: string) => ["Keyword", "Search keyword", "Palavra-chave", "Termo de pesquisa"].includes(h))
+      const idxImpressions = headers.findIndex((h: string) => ["Impressions", "Impr.", "Impressões"].includes(h))
+      const idxClicks = headers.findIndex((h: string) => ["Clicks", "Cliques"].includes(h))
+      const idxCtr = headers.findIndex((h: string) => ["CTR"].includes(h))
       
       const processed: KeywordData[] = rows.map((row: any[]) => {
         return {

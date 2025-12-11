@@ -968,8 +968,9 @@ export const fetchPinterestNacionalData = async () => {
 // Função para buscar dados de Palavras-chave Google Search
 export const fetchGoogleSearchKeywordsData = async () => {
   try {
-    // URL codificada para "Palavras -chave"
-    const rangeName = encodeURIComponent("Palavras -chave")
+    // Tenta buscar com "Palavras-chave" (padrão esperado)
+    // OBS: Verificar se o nome exato na planilha é "Palavras-chave", "Palavras -chave" ou "Palavras chave"
+    const rangeName = encodeURIComponent("Palavras-chave")
     const response = await apiNacional.get(
       `/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=${rangeName}`,
     )
