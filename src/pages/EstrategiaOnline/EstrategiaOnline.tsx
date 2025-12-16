@@ -186,17 +186,22 @@ const EstrategiaOnline: React.FC = () => {
       // Calcular resumo da campanha
       const totalGeralPrevisto = processed.reduce((sum, v) => sum + v.custoPrevisto, 0)
       
-      // Regra de visualização: Custo Investido nunca deve ser visualmente maior que Custo Previsto
-      const totalGeralInvestido = processed.reduce((sum, v) => {
+      // 1. Total Real (para exibição no Card de Custo Realizado) - SEM TETO
+      // Deve exibir o valor total gasto, mesmo que ultrapasse o previsto
+      const totalGeralInvestidoReal = processed.reduce((sum, v) => sum + v.custoInvestido, 0)
+
+      // 2. Total com Teto (apenas para cálculo do Pacing Geral)
+      // Garante que o pacing não ultrapasse 100% visualmente no card
+      const totalGeralInvestidoCapped = processed.reduce((sum, v) => {
         const investidoClamp = v.custoInvestido > v.custoPrevisto ? v.custoPrevisto : v.custoInvestido
         return sum + investidoClamp
       }, 0)
 
       const summary: CampaignSummary = {
         totalInvestimentoPrevisto: totalGeralPrevisto,
-        totalCustoInvestido: totalGeralInvestido,
-        pacingGeral: totalGeralPrevisto > 0 ? (totalGeralInvestido / totalGeralPrevisto) * 100 : 0,
-        mesesAtivos: 0, // Comentado: Não é mais possível calcular meses ativos pois a coluna mês foi removida da base de dados
+        totalCustoInvestido: totalGeralInvestidoReal, // Exibe o valor Real (pode ser > previsto)
+        pacingGeral: totalGeralPrevisto > 0 ? (totalGeralInvestidoCapped / totalGeralPrevisto) * 100 : 0, // Pacing travado em 100%
+        mesesAtivos: 0, 
       }
 
       setCampaignSummary(summary)
