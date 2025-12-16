@@ -76,6 +76,8 @@ const LinhaTempo: React.FC = () => {
     "Portal Forum": "#8b4513",
     YouTube: "#ff0000",
     Pinterest: "#bd081c",
+    "Media Smart": "#5D3F6A",
+    "MediaSmart": "#5D3F6A",
     Default: "#6366f1",
   }
 
