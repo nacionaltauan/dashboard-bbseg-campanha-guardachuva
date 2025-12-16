@@ -817,9 +817,25 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const normalizedDate = normalizeDate(date)
       const isPeriodoAntigo = normalizedDate && normalizedDate <= DATA_CORTE
       
-      // Determinar se é Residencial ou Vida baseado na modalidade da linha ou no modo selecionado
-      const isResidencial = modalidadeLinha === "Residencial" || (modo === "residencial" && modalidadeLinha === "")
-      const isVida = modalidadeLinha === "Vida" || (modo === "vida" && modalidadeLinha === "")
+      // Determinação de Modalidade da Linha (Refinada para Data Patching)
+      let isResidencial = false
+      let isVida = false
+
+      if (modalidadeLinha === "Vida") {
+        isVida = true
+      } else if (modalidadeLinha === "Residencial") {
+        isResidencial = true
+      } else if (modalidadeLinha === "Empresarial") {
+         // Empresarial não entra no cálculo de WhatsApp
+      } else {
+        // Sem modalidade explícita na linha
+        if (modo === "vida") {
+          isVida = true
+        } else {
+          // Default: Residencial (abrange modo 'residencial' e 'default')
+          isResidencial = true
+        }
+      }
 
       // Eventos padrão/Empresarial
       if (eventName === "Button_Canais_Digitais_Footer") {
