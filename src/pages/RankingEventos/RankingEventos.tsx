@@ -311,6 +311,14 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     let btnWppFlutuanteResidencialReal = 0
     let btnWppFlutuanteVidaReal = 0
 
+    // Lista de eventos ignorados para o Top 3
+    const IGNORED_EVENTS = [
+      "page_view", "session_start", "first_visit", "page_load_time",
+      "10% Scroll", "user_engagement", "scroll", "25% Scroll",
+      "internal_link_click", "50% Scroll", "75% Scroll", "100% Scroll",
+      "file_download", "form_start", "click"
+    ]
+
     rows.forEach((row: any[]) => {
       const date = row[dateIndex] || ""
       if (!isDateInRange(date)) return
@@ -372,8 +380,10 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
         }
       } 
       else {
-        // Outros eventos
-        targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+        // Filtrar eventos genéricos
+        if (!IGNORED_EVENTS.includes(eventName)) {
+          targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+        }
       }
     })
 
