@@ -652,56 +652,6 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     }
   }, [eventosReceptivosData, ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
-  // Constantes para eventos a excluir do cálculo de WhatsApp Flutuante (período <= 08/12/2025)
-  const EXCLUDED_RESIDENCIAL = [
-    "cta_quero_contratar_1",
-    "querocontratar1_sou_cliente_bb",
-    "querocontratar1_nao_sou_cliente_bb",
-    "btn_saiba_mais_esquerda",
-    "btn_saiba_mais_meio",
-    "btn_saiba_mais_direita",
-    "cta_quero_contratar_2",
-    "btn_faq_porque_vale_a_pena",
-    "btn_faq_que_tipos_de_assistencia",
-    "btn_faq_quais_planos",
-    "btn_faq_quando_posso_usar",
-    "btn_faq_como_acionar_o_seguro",
-    "btn_whatsapp_fundo",
-    "clique_instagram",
-    "clique_facebook",
-    "clique_youtube",
-    "clique_tiktok",
-    "clique_pinterest",
-    "clique_header_planos",
-    "clique_header_coberturas",
-    "clique_header_depoimentos",
-    "clique_header_faq"
-  ]
-
-  const EXCLUDED_VIDA = [
-    "cta_quero_contratar_1_vida",
-    "querocontratar1_sou_cliente_bb_vida",
-    "querocontratar1_nao_sou_cliente_bb_vida",
-    "btn_saiba_mais_esquerda_vida",
-    "btn_saiba_mais_meio_vida",
-    "btn_saiba_mais_direita_vida",
-    "cta_quero_contratar_2_vida",
-    "btn_faq_porque_vale_a_pena_vida",
-    "btn_faq_que_tipos_de_assistencia_vida",
-    "btn_faq_quais_planos_vida",
-    "btn_faq_quando_posso_usar_vida",
-    "btn_faq_como_acionar_o_seguro_vida",
-    "btn_whatsapp_fundo_vida",
-    "clique_instagram_vida",
-    "clique_facebook_vida",
-    "clique_youtube_vida",
-    "clique_tiktok_vida",
-    "clique_pinterest_vida",
-    "clique_header_planos_vida",
-    "clique_header_coberturas_vida",
-    "clique_header_depoimentos_vida",
-    "clique_header_faq_vida"
-  ]
 
   // Data de corte para correção de tagueamento
   const DATA_CORTE = "2025-12-08"
@@ -754,8 +704,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     let btnQueroContratarPrincipal = 0
     let souClienteBB = 0
     let naoSouClienteBB = 0
-    let btnWppFlutuante = 0 // Período novo (> 08/12/2025)
-    let btnWppFlutuanteCalculado = 0 // Período antigo (<= 08/12/2025)
+    let btnWppFlutuanteReal = 0 // Período novo (> 08/12/2025)
     let btnQueroContratar2 = 0
     let btnWppFundo = 0
     
@@ -763,18 +712,15 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     let btnQueroContratarPrincipalVida = 0
     let souClienteBBVida = 0
     let naoSouClienteBBVida = 0
-    let btnWppFlutuanteVida = 0 // Período novo (> 08/12/2025)
-    let btnWppFlutuanteVidaCalculado = 0 // Período antigo (<= 08/12/2025)
+    let btnWppFlutuanteVidaReal = 0 // Período novo (> 08/12/2025)
     let btnQueroContratar2Vida = 0
     let btnWppFundoVida = 0
     
-    // Contadores para internal_link_click (período antigo)
-    let internalLinkClickResidencial = 0
-    let internalLinkClickVida = 0
-    
-    // Contadores para soma de eventos excluídos (período antigo)
-    let somaExcluidosResidencial = 0
-    let somaExcluidosVida = 0
+    // Acumuladores para correção de dados (Período Antigo <= 08/12/2025)
+    let waMeTotalResidencialAntigo = 0
+    let waMeTotalVidaAntigo = 0
+    let btnWppFundoResidencialAntigo = 0
+    let btnWppFundoVidaAntigo = 0
 
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
       // Retornar estrutura completa com todos os dados zerados
@@ -787,13 +733,13 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         btnQueroContratarPrincipal,
         souClienteBB,
         naoSouClienteBB,
-        btnWppFlutuante: 0, // Total = calculado + real (ambos zerados)
+        btnWppFlutuante: 0,
         btnQueroContratar2,
         btnWppFundo,
         btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
         souClienteBBVida: souClienteBBVida,
         naoSouClienteBBVida: naoSouClienteBBVida,
-        btnWppFlutuanteVida: 0, // Total = calculado + real (ambos zerados)
+        btnWppFlutuanteVida: 0,
         btnQueroContratar2Vida: btnQueroContratar2Vida,
         btnWppFundoVida: btnWppFundoVida,
       }
@@ -807,6 +753,10 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     const eventNameIndex = getColumnIndex(headers, "Event name")
     const eventCountIndex = getColumnIndex(headers, "Event count")
     const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    
+    // Tente variações comuns do nome da coluna Link URL
+    let linkUrlIndex = getColumnIndex(headers, "Link URL");
+    if (linkUrlIndex === -1) linkUrlIndex = getColumnIndex(headers, "Link_URL");
 
     if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) {
       console.warn("⚠️ [DIAGNÓSTICO] Colunas essenciais não encontradas em processedEventosEspecificos:", {
@@ -816,25 +766,24 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         headers
       })
       
-      // Retornar estrutura completa com todos os dados zerados mesmo em caso de erro
       return {
         modo,
-        btnCanaisFooter: btnCanaisFooterTotal,
-        btnOuvidoria: btnOuvidoriaTotal,
-        btnSAC: btnSACTotal,
-        preenchimentoForm: preenchimentoFormTotal,
-        btnQueroContratarPrincipal,
-        souClienteBB,
-        naoSouClienteBB,
-        btnWppFlutuante: 0, // Total = calculado + real (ambos zerados)
-        btnQueroContratar2,
-        btnWppFundo,
-        btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
-        souClienteBBVida: souClienteBBVida,
-        naoSouClienteBBVida: naoSouClienteBBVida,
-        btnWppFlutuanteVida: 0, // Total = calculado + real (ambos zerados)
-        btnQueroContratar2Vida: btnQueroContratar2Vida,
-        btnWppFundoVida: btnWppFundoVida,
+        btnCanaisFooter: 0,
+        btnOuvidoria: 0,
+        btnSAC: 0,
+        preenchimentoForm: 0,
+        btnQueroContratarPrincipal: 0,
+        souClienteBB: 0,
+        naoSouClienteBB: 0,
+        btnWppFlutuante: 0,
+        btnQueroContratar2: 0,
+        btnWppFundo: 0,
+        btnQueroContratarPrincipalVida: 0,
+        souClienteBBVida: 0,
+        naoSouClienteBBVida: 0,
+        btnWppFlutuanteVida: 0,
+        btnQueroContratar2Vida: 0,
+        btnWppFundoVida: 0,
       }
     }
 
@@ -872,7 +821,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       const isResidencial = modalidadeLinha === "Residencial" || (modo === "residencial" && modalidadeLinha === "")
       const isVida = modalidadeLinha === "Vida" || (modo === "vida" && modalidadeLinha === "")
 
-      // Eventos padrão/Empresarial (não afetados pela correção)
+      // Eventos padrão/Empresarial
       if (eventName === "Button_Canais_Digitais_Footer") {
         btnCanaisFooterTotal += eventCount
       } else if (eventName === "Button_Ouv_Footer") {
@@ -886,92 +835,75 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       // Eventos Residencial
       if (eventName === "cta_quero_contratar_1" && isResidencial) {
         btnQueroContratarPrincipal += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosResidencial += eventCount
-        }
       } else if (eventName === "querocontratar1_sou_cliente_bb" && isResidencial) {
         souClienteBB += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosResidencial += eventCount
-        }
       } else if (eventName === "querocontratar1_nao_sou_cliente_bb" && isResidencial) {
         naoSouClienteBB += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosResidencial += eventCount
-        }
       } else if (eventName === "btn_whatsapp_flutuante" && isResidencial) {
         // Apenas contar se for período novo (> 08/12/2025)
         if (!isPeriodoAntigo) {
-          btnWppFlutuante += eventCount
+          btnWppFlutuanteReal += eventCount
         }
       } else if (eventName === "cta_quero_contratar_2" && isResidencial) {
         btnQueroContratar2 += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosResidencial += eventCount
-        }
       } else if (eventName === "btn_whatsapp_fundo" && isResidencial) {
         btnWppFundo += eventCount
+        // Acumular para o período antigo para subtração posterior
         if (isPeriodoAntigo) {
-          somaExcluidosResidencial += eventCount
+          btnWppFundoResidencialAntigo += eventCount
         }
-      } else if (isPeriodoAntigo && isResidencial && EXCLUDED_RESIDENCIAL.includes(eventName)) {
-        // Contar outros eventos excluídos do período antigo para Residencial
-        somaExcluidosResidencial += eventCount
-      } else if (isPeriodoAntigo && isResidencial && eventName === "internal_link_click") {
-        // Capturar internal_link_click do período antigo para Residencial
-        internalLinkClickResidencial += eventCount
+      }
+      
+      // Lógica de Identificação de Cliques no WhatsApp via URL (Período Antigo - Residencial)
+      if (isPeriodoAntigo && isResidencial && eventName === "internal_link_click") {
+        const url = linkUrlIndex !== -1 ? (row[linkUrlIndex] || "").toString().toLowerCase() : ""
+        if (url.includes("wa.me")) {
+          waMeTotalResidencialAntigo += eventCount
+        }
       }
       
       // Eventos Vida
       if (eventName === "cta_quero_contratar_1_vida") {
         btnQueroContratarPrincipalVida += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosVida += eventCount
-        }
       } else if (eventName === "querocontratar1_sou_cliente_bb_vida") {
         souClienteBBVida += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosVida += eventCount
-        }
       } else if (eventName === "querocontratar1_nao_sou_cliente_bb_vida") {
         naoSouClienteBBVida += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosVida += eventCount
-        }
       } else if (eventName === "btn_whatsapp_flutuante_vida") {
         // Apenas contar se for período novo (> 08/12/2025)
         if (!isPeriodoAntigo) {
-          btnWppFlutuanteVida += eventCount
+          btnWppFlutuanteVidaReal += eventCount
         }
       } else if (eventName === "cta_quero_contratar_2_vida") {
         btnQueroContratar2Vida += eventCount
-        if (isPeriodoAntigo) {
-          somaExcluidosVida += eventCount
-        }
       } else if (eventName === "btn_whatsapp_fundo_vida") {
         btnWppFundoVida += eventCount
+        // Acumular para o período antigo para subtração posterior
         if (isPeriodoAntigo) {
-          somaExcluidosVida += eventCount
+          btnWppFundoVidaAntigo += eventCount
         }
-      } else if (isPeriodoAntigo && isVida && EXCLUDED_VIDA.includes(eventName)) {
-        // Contar outros eventos excluídos do período antigo para Vida
-        somaExcluidosVida += eventCount
-      } else if (isPeriodoAntigo && isVida && eventName === "internal_link_click") {
-        // Capturar internal_link_click do período antigo para Vida
-        internalLinkClickVida += eventCount
+      }
+      
+      // Lógica de Identificação de Cliques no WhatsApp via URL (Período Antigo - Vida)
+      if (isPeriodoAntigo && isVida && eventName === "internal_link_click") {
+        const url = linkUrlIndex !== -1 ? (row[linkUrlIndex] || "").toString().toLowerCase() : ""
+        if (url.includes("wa.me")) {
+          waMeTotalVidaAntigo += eventCount
+        }
       }
     })
     
-    // Calcular WhatsApp Flutuante para período antigo (Residencial)
-    // Fórmula: internal_link_click - (soma de todos os outros eventos)
-    btnWppFlutuanteCalculado = Math.max(0, internalLinkClickResidencial - somaExcluidosResidencial)
+    // Cálculo Final do Botão Flutuante (Correção de Dados)
     
-    // Calcular WhatsApp Flutuante para período antigo (Vida)
-    btnWppFlutuanteVidaCalculado = Math.max(0, internalLinkClickVida - somaExcluidosVida)
+    // Residencial
+    // Botão Flutuante (Antigo) = Total Cliques wa.me (Antigo) - Botão Fundo (Antigo)
+    const wppFlutuanteCalculado = Math.max(0, waMeTotalResidencialAntigo - btnWppFundoResidencialAntigo)
+    const totalWppFlutuanteResidencial = wppFlutuanteCalculado + btnWppFlutuanteReal
     
-    // Total final = Calculado (passado) + Real (presente/futuro)
-    const btnWppFlutuanteTotal = btnWppFlutuanteCalculado + btnWppFlutuante
-    const btnWppFlutuanteVidaTotal = btnWppFlutuanteVidaCalculado + btnWppFlutuanteVida
+    // Vida
+    // Botão Flutuante (Antigo) = Total Cliques wa.me (Antigo) - Botão Fundo (Antigo)
+    const wppFlutuanteVidaCalculado = Math.max(0, waMeTotalVidaAntigo - btnWppFundoVidaAntigo)
+    const totalWppFlutuanteVida = wppFlutuanteVidaCalculado + btnWppFlutuanteVidaReal
 
     // Retornar TODOS os dados para facilitar renderização condicional
     return {
@@ -981,18 +913,18 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
       btnOuvidoria: btnOuvidoriaTotal,
       btnSAC: btnSACTotal,
       preenchimentoForm: preenchimentoFormTotal,
-      // Eventos Residencial (btnWppFlutuante já inclui calculado + real)
+      // Eventos Residencial
       btnQueroContratarPrincipal,
       souClienteBB,
       naoSouClienteBB,
-      btnWppFlutuante: btnWppFlutuanteTotal,
+      btnWppFlutuante: totalWppFlutuanteResidencial,
       btnQueroContratar2,
       btnWppFundo,
-      // Eventos Vida (btnWppFlutuanteVida já inclui calculado + real)
+      // Eventos Vida
       btnQueroContratarPrincipalVida: btnQueroContratarPrincipalVida,
       souClienteBBVida: souClienteBBVida,
       naoSouClienteBBVida: naoSouClienteBBVida,
-      btnWppFlutuanteVida: btnWppFlutuanteVidaTotal,
+      btnWppFlutuanteVida: totalWppFlutuanteVida,
       btnQueroContratar2Vida: btnQueroContratar2Vida,
       btnWppFundoVida: btnWppFundoVida,
     }
