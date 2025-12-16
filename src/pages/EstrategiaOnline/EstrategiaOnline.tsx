@@ -186,7 +186,12 @@ const EstrategiaOnline: React.FC = () => {
 
       // Calcular resumo da campanha
       const totalGeralPrevisto = processed.reduce((sum, v) => sum + v.custoPrevisto, 0)
-      const totalGeralInvestido = processed.reduce((sum, v) => sum + v.custoInvestido, 0)
+      
+      // Regra de visualização: Custo Investido nunca deve ser visualmente maior que Custo Previsto
+      const totalGeralInvestido = processed.reduce((sum, v) => {
+        const investidoClamp = v.custoInvestido > v.custoPrevisto ? v.custoPrevisto : v.custoInvestido
+        return sum + investidoClamp
+      }, 0)
 
       const summary: CampaignSummary = {
         totalInvestimentoPrevisto: totalGeralPrevisto,
@@ -234,6 +239,11 @@ const EstrategiaOnline: React.FC = () => {
     const totalPrevisto = Object.values(aggregated).reduce((sum, v) => sum + v.custoPrevisto, 0)
 
     Object.values(aggregated).forEach((vehicle) => {
+      // Regra de visualização: Custo Investido nunca deve ser visualmente maior que Custo Previsto
+      if (vehicle.custoInvestido > vehicle.custoPrevisto) {
+        vehicle.custoInvestido = vehicle.custoPrevisto
+      }
+
       vehicle.pacing = vehicle.custoPrevisto > 0 ? (vehicle.custoInvestido / vehicle.custoPrevisto) * 100 : 0
       vehicle.shareInvestimentoTotal = totalPrevisto > 0 ? (vehicle.custoPrevisto / totalPrevisto) * 100 : 0
     })
