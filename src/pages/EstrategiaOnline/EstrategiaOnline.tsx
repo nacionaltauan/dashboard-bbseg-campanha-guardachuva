@@ -32,7 +32,6 @@ interface CampaignSummary {
 }
 
 interface AggregatedVehicleData {
-  modalidade: string
   veiculo: string
   custoInvestido: number
   custoPrevisto: number
@@ -218,10 +217,9 @@ const EstrategiaOnline: React.FC = () => {
     const aggregated: Record<string, AggregatedVehicleData> = {}
 
     filteredData.forEach((vehicle) => {
-      const key = `${vehicle.modalidade}_${vehicle.veiculo}`
+      const key = vehicle.veiculo
       if (!aggregated[key]) {
         aggregated[key] = {
-          modalidade: vehicle.modalidade,
           veiculo: vehicle.veiculo,
           custoInvestido: 0,
           custoPrevisto: 0,
@@ -473,8 +471,7 @@ const EstrategiaOnline: React.FC = () => {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[15%]">Modalidade</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[15%]">Veículo</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[30%]">Veículo</th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[18%]">Investimento Previsto</th>
                 <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[12%]">Share (%)</th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[18%]">Custo Realizado</th>
@@ -484,9 +481,6 @@ const EstrategiaOnline: React.FC = () => {
             <tbody>
               {aggregatedVehicleData.map((vehicle, index) => (
                 <tr key={index} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <td className="py-4 px-4">
-                    <span className="font-medium text-gray-900">{vehicle.modalidade}</span>
-                  </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-3">
                       <div
@@ -546,7 +540,6 @@ const EstrategiaOnline: React.FC = () => {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-300 bg-gray-50/50">
-                <td className="py-4 px-4 font-bold text-gray-900">-</td>
                 <td className="py-4 px-4 font-bold text-gray-900">Total</td>
                 <td className="py-4 px-4 text-right font-bold text-gray-900">
                   {formatCurrency(filteredTotals.totalPrevisto)}
