@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Home, Clock, Globe, Eye, BarChart3, Users, LogOut, User, BookOpenText, Share2, Video, TrendingUp, Search } from "lucide-react"
+import { Home, Clock, Globe, Eye, BarChart3, Users, LogOut, User, BookOpenText, Share2, Video, TrendingUp, Search, List } from "lucide-react"
 import { useAuth } from "../../contexts/AuthContext"
 
 interface MenuItem {
@@ -55,6 +55,12 @@ const menuItems: MenuItem[] = [
     label: "Tráfego e Engajamento",
     path: "/trafego-engajamento",
     icon: <TrendingUp className="w-5 h-5" />,
+  },
+  {
+    id: "ranking-eventos",
+    label: "Ranking de Eventos",
+    path: "/ranking-eventos",
+    icon: <List className="w-5 h-5" />,
   },
   {
     id: "criativos-meta",

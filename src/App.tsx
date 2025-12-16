@@ -17,6 +17,7 @@ import GoogleSearch from "./pages/GoogleSearch/GoogleSearch"
 import Glossario from "./pages/Glossario/Glossario" // Nova importação para Glossario
 import "./App.css"
 import TrafegoEngajamento from "./pages/TrafegoEngajamento/TrafegoEngajamento"
+import RankingEventos from "./pages/RankingEventos/RankingEventos"
 
 // Substitua pelo seu Google Client ID
 const GOOGLE_CLIENT_ID = "815966239613-rmc18h1asv405hk42qetehm5aten52qi.apps.googleusercontent.com"
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/alcance" element={<Alcance />} />
                 <Route path="/visualizacoes" element={<Visualizacoes />} />
                 <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} />
+                <Route path="/ranking-eventos" element={<RankingEventos />} />
                 <Route path="/criativos-meta" element={<CriativosMeta />} />
                 <Route path="/criativos-tiktok" element={<CriativosTikTok />} />
                 <Route path="/google-search" element={<GoogleSearch />} />
