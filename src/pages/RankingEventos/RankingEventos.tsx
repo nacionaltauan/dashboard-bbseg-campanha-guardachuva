@@ -156,7 +156,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
 
   const processedData = useMemo(() => {
     if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
-      return []
+      return {} as Record<string, number>
     }
 
     const headers = eventosReceptivosData.data.values[0]
@@ -168,7 +168,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     let linkUrlIndex = getColumnIndex(headers, "Link URL")
     if (linkUrlIndex === -1) linkUrlIndex = getColumnIndex(headers, "Link_URL")
 
-    if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) return []
+    if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) return {} as Record<string, number>
 
     // Acumuladores Globais
     const counts: Record<string, number> = {}
