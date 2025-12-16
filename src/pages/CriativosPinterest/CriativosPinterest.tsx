@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useMemo, useRef } from "react"
-import { Calendar, MapPin, Users, Search } from "lucide-react"
+import { Calendar, MapPin, Users, Search, ArrowUpDown } from "lucide-react"
 import { usePinterestNacionalData } from "../../services/api"
 import Loading from "../../components/Loading/Loading"
 import { googleDriveApi } from "../../services/googleDriveApi"
@@ -50,6 +50,7 @@ const CriativosPinterest: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc")
 
   const [creativeMedias, setCreativeMedias] = useState<Map<string, { url: string, type: string }>>(new Map())
   const [mediasLoading, setMediasLoading] = useState(false)
@@ -102,41 +103,50 @@ const CriativosPinterest: React.FC = () => {
         return idx >= 0 ? (row[idx] ?? "") : ""
       }
       
-      // Tentar múltiplos nomes possíveis para cada campo
-      const promotedPinName = get("Promoted Pin Name") || get("Pin promotion name") || get("promotedPinName") || ""
-      const campaignName = get("Campaign name") || get("campaignName") || ""
-      const adGroupName = get("Ad group name") || get("adGroupName") || ""
-      const advertiserName = get("Advertiser name") || get("advertiserName") || campaignName || ""
-      const spend = get("Spend") || get("spendInMicroDollar") || get("Spend (in micro dollar)") || "0"
-      const cost = spend.includes("micro") ? parseNumber(spend) / 1000000 : parseNumber(spend)
+      // Mapeamento específico para a aba "Pinterest_nao_tratado"
+      const promotedPinName = get("Promoted pin name") || get("Promoted Pin Name") || ""
+      const campaignName = get("Campaign name") || ""
+      const adGroupName = get("Ad group name") || ""
+      const advertiserName = get("Advertiser name") || ""
       
+      // Cost na nova aba é "Cost", mas mantemos fallback
+      let costVal = get("Cost")
+      if (!costVal) costVal = get("Spend")
+      if (!costVal) costVal = get("spendInMicroDollar")
+      
+      // Se for micro dollar, divide. Se for Cost direto, assume valor real
+      let cost = parseNumber(costVal)
+      if (costVal && costVal.includes("micro")) {
+        cost = cost / 1000000
+      }
+
       return {
         date: get("Date") || "",
         advertiserName,
         campaignName,
         adGroupName,
         promotedPinName,
-        promotedPinStatus: get("Promoted Pin Status") || get("promotedPinStatus") || "ACTIVE",
-        creativeType: get("Creative type") || get("creativeType") || "REGULAR",
-        adId: get("Ad ID") || get("adId") || "",
-        destinationUrl: get("Destination URL") || get("destinationUrl") || "",
-        impressions: parseInteger(get("Impressions") || get("impressions") || "0"),
-        clicks: parseInteger(get("Clicks") || get("clicks") || get("Pin clicks") || "0"),
-        outboundClicks: parseInteger(get("Outbound clicks") || get("outboundClicks") || get("Outbound Clicks") || "0"),
+        promotedPinStatus: get("Promoted pin status") || "ACTIVE",
+        creativeType: get("Creative type") || "REGULAR",
+        adId: get("Ad ID") || "",
+        destinationUrl: get("Destination URL") || "",
+        impressions: parseInteger(get("Impressions")),
+        clicks: parseInteger(get("Clicks")),
+        outboundClicks: parseInteger(get("Outbound clicks")),
         cost,
-        cpc: parseNumber(get("CPC") || get("cpc") || "0"),
-        cpm: parseNumber(get("CPM") || get("cpm") || "0"),
-        reach: parseInteger(get("Reach") || get("reach") || "0"),
-        frequency: parseNumber(get("Frequency") || get("frequency") || "0"),
-        ctr: parseNumber(get("CTR") || get("ctr") || "0"),
-        videoStartsPaid: parseInteger(get("Video starts (paid)") || get("videoStartsPaid") || "0"),
-        videoViewsPaid: parseInteger(get("Video views (paid)") || get("videoViewsPaid") || "0"),
-        videoAvgWatchTime: parseNumber(get("Video avg watch time") || get("videoAvgWatchTime") || "0"),
-        videoViews100Paid: parseInteger(get("Video views 100% (paid)") || get("videoViews100Paid") || "0"),
-        videoViews25Paid: parseInteger(get("Video views 25% (paid)") || get("videoViews25Paid") || "0"),
-        videoViews50Paid: parseInteger(get("Video views 50% (paid)") || get("videoViews50Paid") || "0"),
-        videoViews75Paid: parseInteger(get("Video views 75% (paid)") || get("videoViews75Paid") || "0"),
-        engagements: parseInteger(get("Engagements") || get("engagements") || "0"),
+        cpc: parseNumber(get("CPC")),
+        cpm: parseNumber(get("CPM")),
+        reach: parseInteger(get("Reach")),
+        frequency: parseNumber(get("Frequency")),
+        ctr: parseNumber(get("CTR")),
+        videoStartsPaid: parseInteger(get("Video starts paid")),
+        videoViewsPaid: parseInteger(get("Video views paid")),
+        videoAvgWatchTime: 0, 
+        videoViews100Paid: parseInteger(get("Video views at 100% paid")),
+        videoViews25Paid: parseInteger(get("Video views at 25% paid")),
+        videoViews50Paid: parseInteger(get("Video views at 50% paid")),
+        videoViews75Paid: parseInteger(get("Video views at 75% paid")),
+        engagements: parseInteger(get("Engagements")),
       }
     })
 
@@ -323,10 +333,15 @@ const CriativosPinterest: React.FC = () => {
       ctr: item.impressions > 0 ? (item.outboundClicks / item.impressions) * 100 : 0,
     }))
 
-    finalData.sort((a, b) => b.cost - a.cost)
+    finalData.sort((a, b) => {
+      if (sortOrder === "desc") {
+        return b.cost - a.cost
+      }
+      return a.cost - b.cost
+    })
 
     return finalData
-  }, [processedData, dateRange, selectedModalidades, searchTerm])
+  }, [processedData, dateRange, selectedModalidades, searchTerm, sortOrder])
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
@@ -530,7 +545,15 @@ const CriativosPinterest: React.FC = () => {
               <tr className="bg-red-600 text-white">
                 <th className="text-left py-3 px-4 font-semibold w-[5rem]">Mídia</th>
                 <th className="text-left py-3 px-4 font-semibold">Criativo</th>
-                <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Investimento</th>
+                <th
+                  className="text-right py-3 px-4 font-semibold min-w-[7.5rem] cursor-pointer hover:bg-red-700 transition-colors"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                >
+                  <div className="flex items-center justify-end">
+                    Investimento
+                    <ArrowUpDown className="w-4 h-4 ml-2" />
+                  </div>
+                </th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Impressões</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Alcance</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Cliques</th>
