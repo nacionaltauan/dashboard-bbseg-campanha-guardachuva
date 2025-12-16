@@ -14,7 +14,9 @@ import {
   MousePointer, 
   TrendingUp,
   CornerDownRight,
-  Layout
+  Layout,
+  Medal,
+  Award
 } from "lucide-react"
 import Loading from "../../components/Loading/Loading"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
@@ -276,6 +278,136 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     return counts
   }, [eventosReceptivosData, dateRange, selectedModalidade])
 
+  // --- Top 3 Data (Podium) ---
+  const top3Data = useMemo(() => {
+    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) {
+      return { residencial: [], vida: [], empresarial: [] }
+    }
+
+    const headers = eventosReceptivosData.data.values[0]
+    const rows = eventosReceptivosData.data.values.slice(1)
+
+    const dateIndex = getColumnIndex(headers, "Date")
+    const eventNameIndex = getColumnIndex(headers, "Event name")
+    const eventCountIndex = getColumnIndex(headers, "Event count")
+    const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+    let linkUrlIndex = getColumnIndex(headers, "Link URL")
+    if (linkUrlIndex === -1) linkUrlIndex = getColumnIndex(headers, "Link_URL")
+
+    if (dateIndex === -1 || eventNameIndex === -1 || eventCountIndex === -1) return { residencial: [], vida: [], empresarial: [] }
+
+    // Acumuladores por modalidade
+    const countsResidencial: Record<string, number> = {}
+    const countsVida: Record<string, number> = {}
+    const countsEmpresarial: Record<string, number> = {}
+
+    // Auxiliares para correção (Data Patching)
+    let waMeResidencialAntigo = 0
+    let waMeVidaAntigo = 0
+    let btnWppFundoResidencialAntigo = 0
+    let btnWppFundoVidaAntigo = 0
+    
+    // Acumuladores de WhatsApp Flutuante Real (Novo) para somar depois da correção
+    let btnWppFlutuanteResidencialReal = 0
+    let btnWppFlutuanteVidaReal = 0
+
+    rows.forEach((row: any[]) => {
+      const date = row[dateIndex] || ""
+      if (!isDateInRange(date)) return
+
+      const eventName = (row[eventNameIndex] || "").toString().trim()
+      const eventCount = parseInt(row[eventCountIndex]) || 0
+      const modalidadeLinha = modalidadeIndex !== -1 ? (row[modalidadeIndex] || "").toString().trim() : ""
+      
+      const normalizedDate = normalizeDate(date)
+      const isPeriodoAntigo = normalizedDate && normalizedDate <= DATA_CORTE
+
+      // Identificar modalidade da linha
+      let targetCounts = countsResidencial // Default
+      let isVida = false
+      let isResidencial = true // Default
+
+      if (modalidadeLinha === "Vida") {
+        targetCounts = countsVida
+        isVida = true
+        isResidencial = false
+      } else if (modalidadeLinha === "Empresarial") {
+        targetCounts = countsEmpresarial
+        isResidencial = false
+      } else if (modalidadeLinha === "Residencial") {
+        targetCounts = countsResidencial
+        isResidencial = true
+      }
+      
+      // --- Lógica de Correção WhatsApp (Similar ao processedData mas segregada) ---
+      
+      if (eventName === "btn_whatsapp_fundo") {
+        // Soma normal
+        targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+        
+        // Auxiliar para subtração (Apenas se for Residencial e Antigo)
+        if (isPeriodoAntigo && isResidencial) btnWppFundoResidencialAntigo += eventCount
+      }
+      else if (eventName === "btn_whatsapp_fundo_vida") {
+        targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+        if (isPeriodoAntigo && isVida) btnWppFundoVidaAntigo += eventCount
+      }
+      else if (eventName === "btn_whatsapp_flutuante") {
+        if (!isPeriodoAntigo && isResidencial) btnWppFlutuanteResidencialReal += eventCount
+        // Se for empresarial ou outro, soma direto pois não tem lógica de correção complexa definida
+        if (!isResidencial && !isVida) targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+      }
+      else if (eventName === "btn_whatsapp_flutuante_vida") {
+        if (!isPeriodoAntigo && isVida) btnWppFlutuanteVidaReal += eventCount
+      }
+      else if (eventName === "internal_link_click" && isPeriodoAntigo) {
+        const url = linkUrlIndex !== -1 ? (row[linkUrlIndex] || "").toString().toLowerCase() : ""
+        if (url.includes("wa.me")) {
+           if (isVida) {
+             waMeVidaAntigo += eventCount
+           } else {
+             // Assume Residencial para correção (Empresarial geralmente não entra nessa correção específica de wa.me vs fundo)
+             waMeResidencialAntigo += eventCount
+           }
+        }
+      } 
+      else {
+        // Outros eventos
+        targetCounts[eventName] = (targetCounts[eventName] || 0) + eventCount
+      }
+    })
+
+    // Calcular WhatsApp Flutuante Final e Inserir nos Counts
+    
+    // Residencial
+    const wppFlutuanteResidencialCalculado = Math.max(0, waMeResidencialAntigo - btnWppFundoResidencialAntigo)
+    const totalWppFlutuanteResidencial = wppFlutuanteResidencialCalculado + btnWppFlutuanteResidencialReal
+    if (totalWppFlutuanteResidencial > 0) {
+        countsResidencial["btn_whatsapp_flutuante"] = totalWppFlutuanteResidencial
+    }
+
+    // Vida
+    const wppFlutuanteVidaCalculado = Math.max(0, waMeVidaAntigo - btnWppFundoVidaAntigo)
+    const totalWppFlutuanteVida = wppFlutuanteVidaCalculado + btnWppFlutuanteVidaReal
+    if (totalWppFlutuanteVida > 0) {
+        countsVida["btn_whatsapp_flutuante_vida"] = totalWppFlutuanteVida
+    }
+
+    // Helper para transformar em array e ordenar
+    const getTop3 = (counts: Record<string, number>) => {
+      return Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3)
+    }
+
+    return {
+      residencial: getTop3(countsResidencial),
+      vida: getTop3(countsVida),
+      empresarial: getTop3(countsEmpresarial)
+    }
+  }, [eventosReceptivosData, dateRange])
+
   // --- Categorização e Estruturação ---
 
   const categories = useMemo<CategoriaEventos[]>(() => {
@@ -476,6 +608,65 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Podium Top 3 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { title: "Residencial", data: top3Data.residencial, color: "blue", icon: <MapPin className="w-5 h-5 text-blue-600" /> },
+          { title: "Vida", data: top3Data.vida, color: "green", icon: <MapPin className="w-5 h-5 text-green-600" /> },
+          { title: "Empresarial", data: top3Data.empresarial, color: "orange", icon: <MapPin className="w-5 h-5 text-orange-600" /> }
+        ].map((podium) => (
+          <div key={podium.title} className={`card-overlay rounded-lg shadow-lg border-t-4 border-${podium.color}-500 overflow-hidden`}>
+            <div className="p-4 bg-gradient-to-br from-gray-50 to-white">
+              <div className="flex items-center space-x-2 mb-4">
+                {podium.icon}
+                <h3 className="font-bold text-gray-800 uppercase tracking-wide text-sm">{podium.title}</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {podium.data.length > 0 ? (
+                  podium.data.map((item, index) => {
+                    const isFirst = index === 0
+                    const Icon = index === 0 ? Trophy : index === 1 ? Medal : Award
+                    const iconColor = index === 0 ? "text-yellow-500" : index === 1 ? "text-gray-400" : "text-amber-700"
+                    
+                    // Formatação simples do nome
+                    const formattedName = item.name
+                      .replace(/_/g, " ")
+                      .replace(/cta /gi, "")
+                      .replace(/btn /gi, "")
+                      .replace(/vida/gi, "") // Remove redundância no card de Vida
+                      .replace(/flutuante/gi, "Flut.") // Abreviação
+                      
+                    return (
+                      <div key={index} className={`flex items-center justify-between p-2 rounded-lg ${isFirst ? `bg-${podium.color}-50 border border-${podium.color}-100` : "hover:bg-gray-50"}`}>
+                        <div className="flex items-center space-x-3 overflow-hidden">
+                          <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${isFirst ? "bg-white shadow-sm" : ""}`}>
+                            <Icon className={`w-5 h-5 ${iconColor}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-xs font-medium truncate ${isFirst ? `text-${podium.color}-900 font-bold` : "text-gray-700"}`} title={item.name}>
+                              {formattedName}
+                            </p>
+                            {isFirst && <p className="text-[10px] text-gray-500 uppercase font-semibold">Líder</p>}
+                          </div>
+                        </div>
+                        <span className={`text-sm font-bold ${isFirst ? `text-${podium.color}-700` : "text-gray-600"}`}>
+                          {item.count.toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-4 text-gray-400 text-sm">
+                    Sem dados para o período
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Grid de Categorias */}
