@@ -41,7 +41,10 @@ const AUTHORIZED_EMAILS = [
   "veselinnkolev@gmail.com",
   "thailima@brasilseg.com.br",
   "wilson.pereira.new@gmail.com",
-  "niupat@gmail.com"
+  "niupat@gmail.com",
+  "tcatuaba@brasilseg.com.br",
+  "fernansilv@brasilseg.com.br",
+  "stborges@brasilseg.com.br"
 ]
 
 const AUTHORIZED_DOMAINS = [
