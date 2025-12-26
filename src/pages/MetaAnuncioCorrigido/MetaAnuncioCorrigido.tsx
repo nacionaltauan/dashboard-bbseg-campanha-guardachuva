@@ -55,7 +55,8 @@ const MetaAnuncioCorrigido: FC = () => {
         return parseInt(str) || 0
       }
 
-      const processed: MetaAnuncioData[] = rows
+      // 1. Filtrar pelo Ad name específico
+      const filtered: MetaAnuncioData[] = rows
         .map((row: any[]) => {
           const adName = (row[idxAdName] || "").toString().trim()
 
@@ -79,6 +80,32 @@ const MetaAnuncioCorrigido: FC = () => {
         })
         .filter((item: MetaAnuncioData | null): item is MetaAnuncioData => item !== null)
 
+      // 2. Agrupar por externalDestinationUrl e somar métricas
+      const aggregated = new Map<string, MetaAnuncioData>()
+      
+      filtered.forEach((item) => {
+        const url = item.externalDestinationUrl || ""
+        const existing = aggregated.get(url)
+        
+        if (existing) {
+          // Somar métricas para a mesma URL
+          existing.cost += item.cost
+          existing.impressions += item.impressions
+          existing.linkClicks += item.linkClicks
+        } else {
+          // Primeira ocorrência desta URL
+          aggregated.set(url, {
+            adName: item.adName,
+            externalDestinationUrl: url,
+            cost: item.cost,
+            impressions: item.impressions,
+            linkClicks: item.linkClicks,
+          })
+        }
+      })
+
+      // 3. Converter Map para Array
+      const processed = Array.from(aggregated.values())
       setProcessedData(processed)
     } else if (apiData?.values) {
       // Fallback para estrutura alternativa
@@ -116,7 +143,8 @@ const MetaAnuncioCorrigido: FC = () => {
         return parseInt(str) || 0
       }
 
-      const processed: MetaAnuncioData[] = rows
+      // 1. Filtrar pelo Ad name específico
+      const filtered: MetaAnuncioData[] = rows
         .map((row: any[]) => {
           const adName = (row[idxAdName] || "").toString().trim()
 
@@ -140,6 +168,32 @@ const MetaAnuncioCorrigido: FC = () => {
         })
         .filter((item: MetaAnuncioData | null): item is MetaAnuncioData => item !== null)
 
+      // 2. Agrupar por externalDestinationUrl e somar métricas
+      const aggregated = new Map<string, MetaAnuncioData>()
+      
+      filtered.forEach((item) => {
+        const url = item.externalDestinationUrl || ""
+        const existing = aggregated.get(url)
+        
+        if (existing) {
+          // Somar métricas para a mesma URL
+          existing.cost += item.cost
+          existing.impressions += item.impressions
+          existing.linkClicks += item.linkClicks
+        } else {
+          // Primeira ocorrência desta URL
+          aggregated.set(url, {
+            adName: item.adName,
+            externalDestinationUrl: url,
+            cost: item.cost,
+            impressions: item.impressions,
+            linkClicks: item.linkClicks,
+          })
+        }
+      })
+
+      // 3. Converter Map para Array
+      const processed = Array.from(aggregated.values())
       setProcessedData(processed)
     }
   }, [apiData])
