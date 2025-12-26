@@ -12,7 +12,7 @@ import Alcance from "./pages/Alcance/Alcance"
 import Visualizacoes from "./pages/Visualizacoes/Visualizacoes"
 import CriativosTikTok from "./pages/CriativosTikTok/CriativosTikTok"
 import CriativosMeta from "./pages/CriativosMetaAds/CriativosMetaAds"
-import MetaAnuncioCorrigido from "./pages/MetaAnuncioCorrigido/MetaAnuncioCorrigido"
+// import MetaAnuncioCorrigido from "./pages/MetaAnuncioCorrigido/MetaAnuncioCorrigido" // Comentado temporariamente
 import CriativosPinterest from "./pages/CriativosPinterest/CriativosPinterest"
 import GoogleSearch from "./pages/GoogleSearch/GoogleSearch"
 import Glossario from "./pages/Glossario/Glossario" // Nova importação para Glossario
@@ -44,7 +44,7 @@ function App() {
                 <Route path="/trafego-engajamento" element={<TrafegoEngajamento />} />
                 <Route path="/ranking-eventos" element={<RankingEventos />} />
                 <Route path="/criativos-meta" element={<CriativosMeta />} />
-                <Route path="/meta-anuncio-corrigido" element={<MetaAnuncioCorrigido />} />
+                {/* <Route path="/meta-anuncio-corrigido" element={<MetaAnuncioCorrigido />} /> Comentado temporariamente */}
                 <Route path="/criativos-tiktok" element={<CriativosTikTok />} />
                 <Route path="/google-search" element={<GoogleSearch />} />
                 <Route path="/criativos-pinterest" element={<CriativosPinterest />} />

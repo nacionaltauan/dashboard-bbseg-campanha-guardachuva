@@ -72,12 +72,13 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
   },
-  {
-    id: "meta-anuncio-corrigido",
-    label: "Anuncio Corrigido",
-    path: "/meta-anuncio-corrigido",
-    icon: <CheckCircle className="w-5 h-5" />,
-  },
+  // Comentado temporariamente - Anuncio Corrigido
+  // {
+  //   id: "meta-anuncio-corrigido",
+  //   label: "Anuncio Corrigido",
+  //   path: "/meta-anuncio-corrigido",
+  //   icon: <CheckCircle className="w-5 h-5" />,
+  // },
   {
     id: "criativos-tiktok",
     label: "TikTok - Criativos",
