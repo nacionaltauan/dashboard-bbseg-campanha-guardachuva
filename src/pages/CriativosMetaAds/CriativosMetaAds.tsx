@@ -533,8 +533,11 @@ const CriativosMeta: FC = () => {
     // Filtro por modalidade (usando coluna Modalidade)
     if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const modalidade = 'modalidade' in item ? item.modalidade?.toLowerCase() : null
-        return modalidade && selectedModalidades.includes(modalidade)
+        if ('modalidade' in item && typeof item.modalidade === 'string') {
+          const modalidade = item.modalidade.toLowerCase()
+          return selectedModalidades.includes(modalidade)
+        }
+        return false
       })
     }
 
