@@ -58,7 +58,7 @@ interface CreativeDataUntreated {
 
 const CriativosMeta: FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
-  const { data: apiDataUntreated, loading: loadingUntreated, error: errorUntreated } = useMetaNaoTratadoData()
+  const { data: apiDataUntreated, loading, error } = useMetaNaoTratadoData()
   const { data: benchmarkData, loading: benchmarkLoading } = useBenchmarkNacionalData()
   const [processedData, setProcessedData] = useState<CreativeDataUntreated[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
@@ -112,9 +112,9 @@ const CriativosMeta: FC = () => {
   // Processar dados não tratados (Meta Não Tratado)
   useEffect(() => {
     // Não processar se houver erro
-    if (errorUntreated) {
-      console.warn("Erro ao carregar dados não tratados:", errorUntreated)
-      setProcessedDataUntreated([])
+    if (error) {
+      console.warn("Erro ao carregar dados não tratados:", error)
+      setProcessedData([])
       return
     }
 
@@ -381,10 +381,10 @@ const CriativosMeta: FC = () => {
     } else {
       // Se não houver dados, limpar os estados
       console.log("Nenhum dado não tratado encontrado")
-      setProcessedDataUntreated([])
+      setProcessedData([])
       setAvailableFormatos([])
     }
-  }, [apiDataUntreated, errorUntreated])
+  }, [apiDataUntreated, error])
 
   // useEffect removido: Agora usamos apenas dados não tratados
 
@@ -615,14 +615,14 @@ const CriativosMeta: FC = () => {
     setSelectedCreative(null)
   }
 
-  if (loadingUntreated) {
+  if (loading) {
     return <Loading message="Carregando criativos Meta..." />
   }
 
-  if (errorUntreated) {
+  if (error) {
     return (
       <div className="bg-red-50/90 backdrop-blur-sm border border-red-200 rounded-lg p-4">
-        <p className="text-red-600">Erro ao carregar dados: {errorUntreated?.message}</p>
+        <p className="text-red-600">Erro ao carregar dados: {error?.message}</p>
       </div>
     )
   }
