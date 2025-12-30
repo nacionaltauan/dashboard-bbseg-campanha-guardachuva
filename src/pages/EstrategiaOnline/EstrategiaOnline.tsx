@@ -188,25 +188,47 @@ const EstrategiaOnline: React.FC = () => {
       setAvailableModalidades(modalidades)
 
       // Calcular resumo da campanha
-      const totalGeralPrevisto = processed.reduce((sum, v) => sum + v.custoPrevisto, 0)
+      // IMPORTANTE: Agregar por veículo primeiro (igual à lógica da tabela)
+      // Isso garante que os cards batam com o rodapé da tabela
+      const vehicleAggregation: Record<string, { custoInvestidoReal: number; custoPrevisto: number }> = {}
       
-      // 1. Total Real (sem teto) - para cálculo do bonificado
-      const totalGeralInvestidoReal = processed.reduce((sum, v) => sum + v.custoInvestido, 0)
+      processed.forEach((vehicle) => {
+        const key = vehicle.veiculo
+        if (!vehicleAggregation[key]) {
+          vehicleAggregation[key] = {
+            custoInvestidoReal: 0,
+            custoPrevisto: 0,
+          }
+        }
+        vehicleAggregation[key].custoInvestidoReal += vehicle.custoInvestido
+        vehicleAggregation[key].custoPrevisto += vehicle.custoPrevisto
+      })
 
-      // 2. Total com Teto (para Card "Custo Realizado" e Pacing Geral)
-      // Aplica teto individualmente por veículo: Math.min(custoInvestido, custoPrevisto)
-      const totalGeralInvestidoCapped = processed.reduce((sum, v) => {
-        const investidoClamp = Math.min(v.custoInvestido, v.custoPrevisto)
+      // Calcular totais baseados em veículos agregados (mesma lógica da tabela)
+      const vehicles = Object.values(vehicleAggregation)
+      
+      // Total Previsto: soma de todos os veículos
+      const totalGeralPrevisto = vehicles.reduce((sum, v) => sum + v.custoPrevisto, 0)
+      
+      // Total Real (sem teto): soma de todos os veículos
+      const totalGeralInvestidoReal = vehicles.reduce((sum, v) => sum + v.custoInvestidoReal, 0)
+
+      // Total com Teto: aplica teto por veículo agregado (igual à tabela)
+      const totalGeralInvestidoCapped = vehicles.reduce((sum, v) => {
+        const investidoClamp = Math.min(v.custoInvestidoReal, v.custoPrevisto)
         return sum + investidoClamp
       }, 0)
 
-      // 3. Total Bonificado (diferença entre Real e Capped)
-      const totalBonificado = totalGeralInvestidoReal - totalGeralInvestidoCapped
+      // Total Bonificado: calcula excedente por veículo agregado e soma
+      const totalBonificado = vehicles.reduce((sum, v) => {
+        const bonificado = Math.max(0, v.custoInvestidoReal - v.custoPrevisto)
+        return sum + bonificado
+      }, 0)
 
       const summary: CampaignSummary = {
         totalInvestimentoPrevisto: totalGeralPrevisto,
-        totalCustoInvestido: totalGeralInvestidoCapped, // Card mostra valor com teto
-        totalInvestimentoBonificado: totalBonificado, // Novo card
+        totalCustoInvestido: totalGeralInvestidoCapped, // Card mostra valor com teto (agregado por veículo)
+        totalInvestimentoBonificado: totalBonificado, // Novo card (agregado por veículo)
         pacingGeral: totalGeralPrevisto > 0 ? (totalGeralInvestidoCapped / totalGeralPrevisto) * 100 : 0, // Pacing travado em 100%
         mesesAtivos: 0, 
       }
