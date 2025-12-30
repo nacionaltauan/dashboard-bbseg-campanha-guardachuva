@@ -9,6 +9,7 @@ export interface PinterestCreativeData {
   campaignName: string
   adGroupName: string
   adName: string
+  modalidade: string
   videoThumbnailUrl: string
   impressions: number
   clicks: number
