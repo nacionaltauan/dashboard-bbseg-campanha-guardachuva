@@ -205,22 +205,28 @@ const EstrategiaOnline: React.FC = () => {
       })
 
       // Calcular totais baseados em veículos agregados (mesma lógica da tabela)
-      const vehicles = Object.values(vehicleAggregation)
+      // Usar Object.entries para ter acesso ao nome do veículo (necessário para exceção TikTok)
+      const vehicleEntries = Object.entries(vehicleAggregation)
       
       // Total Previsto: soma de todos os veículos
-      const totalGeralPrevisto = vehicles.reduce((sum, v) => sum + v.custoPrevisto, 0)
+      const totalGeralPrevisto = vehicleEntries.reduce((sum, [, v]) => sum + v.custoPrevisto, 0)
       
       // Total Real (sem teto): soma de todos os veículos
-      const totalGeralInvestidoReal = vehicles.reduce((sum, v) => sum + v.custoInvestidoReal, 0)
+      const totalGeralInvestidoReal = vehicleEntries.reduce((sum, [, v]) => sum + v.custoInvestidoReal, 0)
 
       // Total com Teto: aplica teto por veículo agregado (igual à tabela)
-      const totalGeralInvestidoCapped = vehicles.reduce((sum, v) => {
+      const totalGeralInvestidoCapped = vehicleEntries.reduce((sum, [, v]) => {
         const investidoClamp = Math.min(v.custoInvestidoReal, v.custoPrevisto)
         return sum + investidoClamp
       }, 0)
 
       // Total Bonificado: calcula excedente por veículo agregado e soma
-      const totalBonificado = vehicles.reduce((sum, v) => {
+      // EXCEÇÃO: TikTok não entra no cálculo de bonificado (sempre 0)
+      const totalBonificado = vehicleEntries.reduce((sum, [veiculoNome, v]) => {
+        // Exceção para TikTok: bonificado sempre 0
+        if (veiculoNome.toLowerCase().includes('tiktok')) {
+          return sum
+        }
         const bonificado = Math.max(0, v.custoInvestidoReal - v.custoPrevisto)
         return sum + bonificado
       }, 0)
@@ -277,7 +283,12 @@ const EstrategiaOnline: React.FC = () => {
       vehicle.custoInvestido = Math.min(vehicle.custoInvestidoReal, vehicle.custoPrevisto)
       
       // Calcular investimento bonificado (excedente)
-      vehicle.investimentoBonificado = Math.max(0, vehicle.custoInvestidoReal - vehicle.custoPrevisto)
+      // EXCEÇÃO: TikTok sempre tem bonificado = 0
+      if (vehicle.veiculo.toLowerCase().includes('tiktok')) {
+        vehicle.investimentoBonificado = 0
+      } else {
+        vehicle.investimentoBonificado = Math.max(0, vehicle.custoInvestidoReal - vehicle.custoPrevisto)
+      }
 
       // Pacing baseado no custo com teto (nunca passa de 100%)
       vehicle.pacing = vehicle.custoPrevisto > 0 ? (vehicle.custoInvestido / vehicle.custoPrevisto) * 100 : 0
