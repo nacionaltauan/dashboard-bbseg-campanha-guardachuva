@@ -100,13 +100,54 @@ const CriativosTikTok: React.FC = () => {
     const headers = values[0]
     const rows = values.slice(1)
 
-    const parseNumber = (v: string) => {
-      if (!v?.trim()) return 0
-      const clean = v
-        .replace(/[R$\s]/g, "")
-        .replace(/\./g, "")
-        .replace(",", ".")
-      return isNaN(+clean) ? 0 : +clean
+    // Função robusta de parseNumber (referência: LinhaTempo.tsx)
+    const parseNumber = (value: string | number) => {
+      if (!value || value === "" || value === null || value === undefined) return 0
+      
+      // Se já é um número, retornar diretamente (sem arredondar)
+      if (typeof value === 'number') {
+        return isNaN(value) || !isFinite(value) ? 0 : value
+      }
+      
+      const stringValue = value.toString().trim()
+      if (stringValue === "" || stringValue === "-" || stringValue === "N/A") return 0
+      
+      // Remover R$ e espaços
+      let cleanValue = stringValue.replace(/R\$\s*/g, "").trim()
+      
+      // Se não tem vírgula nem ponto, pode ser um número inteiro
+      if (!cleanValue.includes(",") && !cleanValue.includes(".")) {
+        const parsed = Number.parseFloat(cleanValue)
+        return isNaN(parsed) ? 0 : parsed
+      }
+      
+      // Remover pontos (separadores de milhar) - mas preservar a vírgula decimal
+      if (cleanValue.includes(",")) {
+        const commaCount = (cleanValue.match(/,/g) || []).length
+        if (commaCount === 1) {
+          cleanValue = cleanValue.replace(/\./g, "")
+          cleanValue = cleanValue.replace(",", ".")
+        } else {
+          cleanValue = cleanValue.replace(/,/g, "")
+        }
+      } else if (cleanValue.includes(".")) {
+        const parts = cleanValue.split(".")
+        if (parts.length === 2 && parts[1].length <= 2) {
+          // Decimal - não fazer nada
+        } else {
+          cleanValue = cleanValue.replace(/\./g, "")
+        }
+      }
+      
+      const parsed = Number.parseFloat(cleanValue)
+      if (isNaN(parsed)) return 0
+      
+      const decimalPlaces = (parsed.toString().split('.')[1] || '').length
+      if (decimalPlaces > 2) {
+        return Math.round(parsed * 100) / 100
+      }
+      
+      return parsed
     }
 
     const parseInteger = (v: string) => {
@@ -336,7 +377,9 @@ const CriativosTikTok: React.FC = () => {
         // Agrupamento de métricas (lógica existente)
         groupedData[key].impressions += item.impressions
         groupedData[key].clicks += item.clicks
-        groupedData[key].cost += item.cost
+        // Usar arredondamento para evitar erros de precisão
+        const costCents = Math.round((item.cost || 0) * 100)
+        groupedData[key].cost = (Math.round(groupedData[key].cost * 100) + costCents) / 100
         groupedData[key].reach += item.reach
         groupedData[key].results += item.results
         groupedData[key].videoViews += item.videoViews
@@ -374,8 +417,19 @@ const CriativosTikTok: React.FC = () => {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 
   const totals = useMemo(() => {
+    // Usar arredondamento para evitar erros de precisão de ponto flutuante em valores monetários
+    const totalInCents = filteredData.reduce((sum, item) => {
+      const value = Number(item.cost) || 0
+      if (!isNaN(value) && isFinite(value) && value >= 0) {
+        const cents = Math.round(value * 100)
+        return sum + cents
+      }
+      return sum
+    }, 0)
+    const investment = totalInCents / 100
+    
     return {
-      investment: filteredData.reduce((sum, item) => sum + item.cost, 0),
+      investment,
       impressions: filteredData.reduce((sum, item) => sum + item.impressions, 0),
       reach: filteredData.reduce((sum, item) => sum + item.reach, 0),
       clicks: filteredData.reduce((sum, item) => sum + item.clicks, 0),
