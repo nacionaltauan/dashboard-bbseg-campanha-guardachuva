@@ -54,41 +54,13 @@ interface CreativeDataUntreated {
   formato: string
 }
 
-// Hook específico para buscar dados Meta - Tratado
-const useMetaTratadoData = () => {
-  const [data, setData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await apiNacional.get(
-        "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Meta_tratado",
-      )
-      setData(response.data.data)
-      setError(null)
-    } catch (err) {
-      setError(err as Error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  return { data, loading, error, refetch: loadData }
-}
+// Hook removido: Agora usamos apenas useMetaNaoTratadoData
 
 const CriativosMeta: FC = () => {
   const contentRef = useRef<HTMLDivElement>(null)
-  const { data: apiData, loading, error } = useMetaTratadoData()
   const { data: apiDataUntreated, loading: loadingUntreated, error: errorUntreated } = useMetaNaoTratadoData()
   const { data: benchmarkData, loading: benchmarkLoading } = useBenchmarkNacionalData()
-  const [processedData, setProcessedData] = useState<CreativeData[]>([])
-  const [processedDataUntreated, setProcessedDataUntreated] = useState<CreativeDataUntreated[]>([])
+  const [processedData, setProcessedData] = useState<CreativeDataUntreated[]>([])
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" })
   const [selectedModalidades, setSelectedModalidades] = useState<string[]>([])
   const [availableModalidades, setAvailableModalidades] = useState<string[]>([])
@@ -101,7 +73,7 @@ const CriativosMeta: FC = () => {
   const [creativeMedias, setCreativeMedias] = useState<Map<string, { url: string, type: string }>>(new Map())
   const [mediasLoading, setMediasLoading] = useState(false)
 
-  const [selectedCreative, setSelectedCreative] = useState<CreativeData | null>(null)
+  const [selectedCreative, setSelectedCreative] = useState<CreativeDataUntreated | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Processar dados de benchmark
@@ -176,7 +148,12 @@ const CriativosMeta: FC = () => {
         .map((row: string[]) => {
           const parseNumber = (value: string) => {
             if (!value || value === "") return 0
-            return Number.parseFloat(value.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
+            // Tratar formato brasileiro: "R$ 80,80" ou "80,80" ou "80.80"
+            const cleaned = value.toString().trim()
+              .replace(/[R$\s]/g, "") // Remove R$, espaços
+              .replace(/\./g, "") // Remove pontos (separadores de milhar)
+              .replace(",", ".") // Substitui vírgula por ponto
+            return Number.parseFloat(cleaned) || 0
           }
 
           const parseInteger = (value: string) => {
@@ -251,7 +228,18 @@ const CriativosMeta: FC = () => {
 
         console.log("Dados processados Untreated (data.values):", filtered.length)
         console.log("Amostra dados Untreated (data.values):", filtered.slice(0, 3))
-        setProcessedDataUntreated(filtered)
+        setProcessedData(filtered)
+
+        // Extrair modalidades únicas da coluna Modalidade
+        const modalidadeSet = new Set<string>()
+        filtered.forEach((item) => {
+          if (item.modalidade) {
+            modalidadeSet.add(item.modalidade.toLowerCase())
+          }
+        })
+        const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
+        console.log("Modalidades disponíveis (data.values):", modalidades)
+        setAvailableModalidades(modalidades)
 
         // Extrair formatos únicos
         const formatoSet = new Set<string>()
@@ -287,7 +275,12 @@ const CriativosMeta: FC = () => {
         .map((row: string[]) => {
           const parseNumber = (value: string) => {
             if (!value || value === "") return 0
-            return Number.parseFloat(value.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
+            // Tratar formato brasileiro: "R$ 80,80" ou "80,80" ou "80.80"
+            const cleaned = value.toString().trim()
+              .replace(/[R$\s]/g, "") // Remove R$, espaços
+              .replace(/\./g, "") // Remove pontos (separadores de milhar)
+              .replace(",", ".") // Substitui vírgula por ponto
+            return Number.parseFloat(cleaned) || 0
           }
 
           const parseInteger = (value: string) => {
@@ -362,7 +355,7 @@ const CriativosMeta: FC = () => {
 
       console.log("Dados processados Untreated:", filtered.length)
       console.log("Amostra dados Untreated:", filtered.slice(0, 3))
-      setProcessedDataUntreated(filtered)
+      setProcessedData(filtered)
 
       // Extrair modalidades únicas da coluna Modalidade
       const modalidadeSet = new Set<string>()
@@ -393,87 +386,7 @@ const CriativosMeta: FC = () => {
     }
   }, [apiDataUntreated, errorUntreated])
 
-  useEffect(() => {
-    if (apiData?.values) {
-      const headers = apiData.values[0]
-      const rows = apiData.values.slice(1)
-
-      const processed: CreativeData[] = rows
-        .map((row: string[]) => {
-          const parseNumber = (value: string) => {
-            if (!value || value === "") return 0
-            return Number.parseFloat(value.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
-          }
-
-          const parseInteger = (value: string) => {
-            if (!value || value === "") return 0
-            return Number.parseInt(value.replace(/[.\s]/g, "").replace(",", "")) || 0
-          }
-
-          const date = row[headers.indexOf("Date")] || ""
-          const campaignName = row[headers.indexOf("Campaign name")] || ""
-          const creativeTitle = row[headers.indexOf("Creative title")] || ""
-          const reach = parseInteger(row[headers.indexOf("Reach")])
-          const impressions = parseInteger(row[headers.indexOf("Impressions")])
-          const clicks = parseInteger(row[headers.indexOf("Clicks")])
-          const totalSpent = parseNumber(row[headers.indexOf("Total spent")])
-          const videoViews = parseInteger(row[headers.indexOf("Video views ")])
-          const videoViews25 = parseInteger(row[headers.indexOf("Video views at 25%")])
-          const videoViews50 = parseInteger(row[headers.indexOf("Video views at 50%")])
-          const videoViews75 = parseInteger(row[headers.indexOf("Video views at 75%")])
-          const videoCompletions = parseInteger(row[headers.indexOf("Video completions ")])
-          const videoStarts = parseInteger(row[headers.indexOf("Video starts")])
-          const totalEngagements = parseInteger(row[headers.indexOf("Total engagements")])
-
-          const cpm = impressions > 0 ? totalSpent / (impressions / 1000) : 0
-          const cpc = clicks > 0 ? totalSpent / clicks : 0
-          const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
-          const frequency = reach > 0 ? impressions / reach : 0
-
-          return {
-            date,
-            campaignName,
-            creativeTitle,
-            reach,
-            impressions,
-            clicks,
-            totalSpent,
-            videoViews,
-            videoViews25,
-            videoViews50,
-            videoViews75,
-            videoCompletions,
-            videoStarts,
-            totalEngagements,
-            cpm,
-            cpc,
-            ctr,
-            frequency,
-          } as CreativeData
-        })
-        .filter((item: CreativeData) => item.date && item.impressions > 0)
-
-      setProcessedData(processed)
-
-      if (processed.length > 0) {
-        const dates = processed
-          .map((item) => {
-            const dateParts = item.date.split("/")
-            if (dateParts.length === 3) {
-              return new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`)
-            }
-            return new Date(item.date)
-          })
-          .sort((a, b) => a.getTime() - b.getTime())
-
-        const startDate = dates[0].toISOString().split("T")[0]
-        const endDate = dates[dates.length - 1].toISOString().split("T")[0]
-        setDateRange({ start: startDate, end: endDate })
-      }
-
-      // Nota: Modalidades serão extraídas dos dados não tratados que têm a coluna Modalidade
-    }
-  }, [apiData])
+  // useEffect removido: Agora usamos apenas dados não tratados
 
   // Função removida: Agora usamos a coluna "Modalidade" diretamente da planilha
 
@@ -497,13 +410,8 @@ const CriativosMeta: FC = () => {
 
   // 3. ATUALIZAÇÃO DA LÓGICA DE FILTRAGEM
   const filteredData = useMemo(() => {
-    // Escolher dados baseados no modo de visualização
-    const sourceData = viewMode === 'overview' ? processedData : processedDataUntreated
-    console.log("Modo de visualização:", viewMode)
-    console.log("Dados de origem:", sourceData.length)
-    console.log("Dados overview:", processedData.length)
-    console.log("Dados untreated:", processedDataUntreated.length)
-    let filtered = sourceData
+    // Usar apenas dados não tratados (única fonte)
+    let filtered = processedData
 
     // Filtro por período
     if (dateRange.start && dateRange.end) {
@@ -559,7 +467,7 @@ const CriativosMeta: FC = () => {
     }
 
     // Agrupar por criativo APÓS a filtragem
-    const groupedData: Record<string, CreativeData> = {}
+    const groupedData: Record<string, CreativeDataUntreated> = {}
     filtered.forEach((item) => {
       // Na visão por formato, agrupar por criativo + formato
       const key = viewMode === 'format' && 'formato' in item && item.formato
@@ -594,7 +502,7 @@ const CriativosMeta: FC = () => {
     finalData.sort((a, b) => b.totalSpent - a.totalSpent)
 
     return finalData
-  }, [processedData, processedDataUntreated, dateRange, selectedModalidades, selectedFormatos, viewMode])
+  }, [processedData, dateRange, selectedModalidades, selectedFormatos, viewMode])
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
@@ -610,7 +518,7 @@ const CriativosMeta: FC = () => {
     if (viewMode !== 'format') return []
     
     console.log("Dados filtrados para tabela secundária:", filteredData.length)
-    const formatGroups: Record<string, CreativeData> = {}
+    const formatGroups: Record<string, CreativeDataUntreated> = {}
     filteredData.forEach((item) => {
       if ('formato' in item && item.formato) {
         const formato = item.formato
@@ -690,7 +598,7 @@ const CriativosMeta: FC = () => {
 
 
 
-  const openCreativeModal = (creative: CreativeData) => {
+  const openCreativeModal = (creative: CreativeDataUntreated) => {
     const mediaData = googleDriveApi.findMediaForCreative(creative.creativeTitle, creativeMedias)
     
     const creativeWithMedia = {
@@ -707,14 +615,14 @@ const CriativosMeta: FC = () => {
     setSelectedCreative(null)
   }
 
-  if (loading || loadingUntreated) {
+  if (loadingUntreated) {
     return <Loading message="Carregando criativos Meta..." />
   }
 
-  if (error || errorUntreated) {
+  if (errorUntreated) {
     return (
       <div className="bg-red-50/90 backdrop-blur-sm border border-red-200 rounded-lg p-4">
-        <p className="text-red-600">Erro ao carregar dados: {error?.message || errorUntreated?.message}</p>
+        <p className="text-red-600">Erro ao carregar dados: {errorUntreated?.message}</p>
       </div>
     )
   }
@@ -921,22 +829,13 @@ const CriativosMeta: FC = () => {
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Visualizações</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">Tx. Engaj.</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">CPM</th>
-                <th className="text-right py-3 px-4 font-semibold min-w-[4rem] text-[15px]">Δ CPM</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">CPC</th>
-                <th className="text-right py-3 px-4 font-semibold min-w-[4rem] text-[15px]">Δ CPC</th>
                 <th className="text-right py-3 px-4 font-semibold min-w-[7.5rem]">CTR</th>
-                <th className="text-right py-3 px-4 font-semibold min-w-[4rem] text-[15px]">Δ CTR</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((creative, index) => {
                 const mediaData = googleDriveApi.findMediaForCreative(creative.creativeTitle, creativeMedias)
-                const benchmark = getBenchmarkData(creative)
-                
-                // Calcular variações
-                const cpmVariation = benchmark ? calculateVariation(creative.cpm, benchmark.cpm, 'cost') : { value: "-", color: "text-gray-500" }
-                const cpcVariation = benchmark ? calculateVariation(creative.cpc, benchmark.cpc, 'cost') : { value: "-", color: "text-gray-500" }
-                const ctrVariation = benchmark ? calculateVariation(creative.ctr, benchmark.ctr, 'performance') : { value: "-", color: "text-gray-500" }
 
                 return (
                   <tr key={index} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
@@ -975,17 +874,8 @@ const CriativosMeta: FC = () => {
                     <td className="py-3 px-4 text-right min-w-[7.5rem]">{formatNumber(creative.videoViews)}</td>
                     <td className="py-3 px-4 text-right min-w-[7.5rem]">{creative.impressions > 0 ? ((creative.totalEngagements / creative.impressions) * 100).toFixed(2) : 0}%</td>
                     <td className="py-3 px-4 text-right min-w-[7.5rem]">{formatCurrency(creative.cpm)}</td>
-                    <td className={`py-3 px-4 text-right min-w-[4rem] text-xs font-medium ${cpmVariation.color}`}>
-                      {cpmVariation.value}
-                    </td>
                     <td className="py-3 px-4 text-right min-w-[7.5rem]">{formatCurrency(creative.cpc)}</td>
-                    <td className={`py-3 px-4 text-right min-w-[4rem] text-xs font-medium ${cpcVariation.color}`}>
-                      {cpcVariation.value}
-                    </td>
                     <td className="py-3 px-4 text-right min-w-[7.5rem]">{creative.ctr.toFixed(2)}%</td>
-                    <td className={`py-3 px-4 text-right min-w-[4rem] text-xs font-medium ${ctrVariation.color}`}>
-                      {ctrVariation.value}
-                    </td>
                   </tr>
                 )
               })}

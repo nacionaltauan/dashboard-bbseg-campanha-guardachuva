@@ -121,17 +121,20 @@ const CriativosTikTok: React.FC = () => {
         const idx = headers.indexOf(field)
         return idx >= 0 ? (row[idx] ?? "") : ""
       }
+      const thumbnailUrl = get("Video thumbnail URL")
+      const thumbnailUrlHttps = thumbnailUrl ? thumbnailUrl.replace(/^http:\/\//i, 'https://') : ""
+      
       return {
         date: get("Date"),
         campaignName: get("Campaign name"),
         adGroupName: get("Ad group name"),
         adName: get("Creative title"),
         adText: get("Ad text"),
-        videoThumbnailUrl: get("Video thumbnail URL"),
+        videoThumbnailUrl: thumbnailUrlHttps,
         modalidade: get("Modalidade") || "",
         impressions: parseInteger(get("Impressions")),
         clicks: parseInteger(get("Clicks")),
-        cost: parseNumber(get("Total spent")),
+        cost: parseNumber(get("Cost") || get("Total spent")),
         cpc: parseNumber(get("CPC")),
         cpm: parseNumber(get("CPM")),
         reach: parseInteger(get("Reach")),
