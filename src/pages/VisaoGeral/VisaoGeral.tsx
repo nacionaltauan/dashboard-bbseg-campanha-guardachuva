@@ -182,6 +182,19 @@ const VisaoGeral: React.FC = () => {
         return parsed
       }
 
+      // Helper para buscar header case-insensitive
+      const getHeaderIndex = (headers: string[], keys: string[]): number => {
+        for (const key of keys) {
+          const idx = headers.findIndex(h => 
+            h === key || 
+            h.trim() === key.trim() || 
+            h.toLowerCase() === key.toLowerCase()
+          )
+          if (idx >= 0) return idx
+        }
+        return -1
+      }
+
       const processed: ProcessedData[] = rows
         .map((row: any[]) => {
 
@@ -192,12 +205,19 @@ const VisaoGeral: React.FC = () => {
             return Number.parseInt(cleanValue) || 0
           }
 
+          // Helper para buscar campo de custo com múltiplas variações (case-insensitive)
+          const getCostValue = () => {
+            const costKeys = ["Total spent", "Total Spent", "TOTAL SPENT", "total spent", "Cost", "cost", "COST"]
+            const idx = getHeaderIndex(headers, costKeys)
+            return idx >= 0 ? (row[idx] ?? "") : ""
+          }
+
           return {
             date: row[headers.indexOf("Date")] || "",
             platform: row[headers.indexOf("Veículo")] || "Outros",
             campaignName: row[headers.indexOf("Campaign name")] || "",
             impressions: parseInteger(row[headers.indexOf("Impressions")]),
-            cost: parseNumber(row[headers.indexOf("Total spent")]),
+            cost: parseNumber(getCostValue()),
             reach: parseInteger(row[headers.indexOf("Reach")]),
             clicks: parseInteger(row[headers.indexOf("Clicks")]),
             frequency: 1, // Será calculado depois
@@ -496,8 +516,30 @@ const VisaoGeral: React.FC = () => {
     const cpv = 0.06
     const vtr = 65
 
+    // Correção cirúrgica: Descontar R$ 10.545,17 do TikTok/Empresarial em 13/12/2025
+    const ERROR_CORRECTION_AMOUNT = 10545.17
+    const ERROR_DATE = "2025-12-13"
+    
+    // Verificar se a data do erro está dentro do range selecionado
+    const isDateInRange = (!dateRange.start || dateRange.start <= ERROR_DATE) && 
+                          (!dateRange.end || dateRange.end >= ERROR_DATE)
+    
+    // Verificar se TikTok está incluído nos filtros (array vazio = todos selecionados)
+    const isTiktokIncluded = selectedPlatforms.length === 0 || 
+                             selectedPlatforms.some(p => p.toLowerCase().includes("tiktok"))
+    
+    // Verificar se Empresarial está incluído nos filtros (array vazio = todos selecionados)
+    const isEmpresarialIncluded = selectedModalidades.length === 0 || 
+                                  selectedModalidades.some(m => m.toLowerCase().includes("empresarial"))
+    
+    // Aplicar correção apenas se todas as condições forem verdadeiras
+    let finalInvestment = investment
+    if (isDateInRange && isTiktokIncluded && isEmpresarialIncluded) {
+      finalInvestment = Math.max(0, finalInvestment - ERROR_CORRECTION_AMOUNT)
+    }
+
     return {
-      investment,
+      investment: finalInvestment,
       impressions,
       reach,
       clicks,
@@ -508,7 +550,7 @@ const VisaoGeral: React.FC = () => {
       cpv,
       vtr,
     }
-  }, [filteredData, alcanceTotals])
+  }, [filteredData, alcanceTotals, dateRange, selectedPlatforms, selectedModalidades])
 
   // Preparar dados para gráficos
   const impressionsChartData: ChartDataPoint[] = platformMetrics.map((metric) => ({

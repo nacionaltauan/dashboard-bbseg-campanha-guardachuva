@@ -412,8 +412,32 @@ const LinhaTempo: React.FC = () => {
     }, 0)
     
     // Converter de volta para reais
-    return totalInCents / 100
-  }, [filteredData])
+    let totalInvestment = totalInCents / 100
+    
+    // Correção cirúrgica: Descontar R$ 10.545,17 do TikTok/Empresarial em 13/12/2025
+    const ERROR_CORRECTION_AMOUNT = 10545.17
+    const ERROR_DATE = "2025-12-13"
+    
+    // Verificar se a data do erro está dentro do range selecionado
+    const isDateInRange = (!dateRange.start || dateRange.start <= ERROR_DATE) && 
+                          (!dateRange.end || dateRange.end >= ERROR_DATE)
+    
+    // Verificar se TikTok está incluído nos filtros (array vazio = todos selecionados)
+    // Nota: Em LinhaTempo, o filtro é "selectedVehicles" não "selectedPlatforms"
+    const isTiktokIncluded = selectedVehicles.length === 0 || 
+                             selectedVehicles.some(v => v.toLowerCase().includes("tiktok"))
+    
+    // Verificar se Empresarial está incluído nos filtros (array vazio = todos selecionados)
+    const isEmpresarialIncluded = selectedModalidades.length === 0 || 
+                                  selectedModalidades.some(m => m.toLowerCase().includes("empresarial"))
+    
+    // Aplicar correção apenas se todas as condições forem verdadeiras
+    if (isDateInRange && isTiktokIncluded && isEmpresarialIncluded) {
+      totalInvestment = Math.max(0, totalInvestment - ERROR_CORRECTION_AMOUNT)
+    }
+    
+    return totalInvestment
+  }, [filteredData, dateRange, selectedVehicles, selectedModalidades])
   const totalImpressions = useMemo(() => filteredData.reduce((sum, item) => sum + item.impressions, 0), [filteredData])
   const totalClicks = useMemo(() => filteredData.reduce((sum, item) => sum + item.clicks, 0), [filteredData])
 

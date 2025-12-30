@@ -447,7 +447,27 @@ const CriativosTikTok: React.FC = () => {
       }
       return sum
     }, 0)
-    const investment = totalInCents / 100
+    let investment = totalInCents / 100
+    
+    // Correção cirúrgica: Descontar R$ 10.545,17 do TikTok/Empresarial em 13/12/2025
+    const ERROR_CORRECTION_AMOUNT = 10545.17
+    const ERROR_DATE = "2025-12-13"
+    
+    // Verificar se a data do erro está dentro do range selecionado
+    const isDateInRange = (!dateRange.start || dateRange.start <= ERROR_DATE) && 
+                          (!dateRange.end || dateRange.end >= ERROR_DATE)
+    
+    // TikTok sempre está incluído (página é só de TikTok)
+    const isTiktokIncluded = true
+    
+    // Verificar se Empresarial está incluído nos filtros (array vazio = todos selecionados)
+    const isEmpresarialIncluded = selectedModalidades.length === 0 || 
+                                  selectedModalidades.some(m => m.toLowerCase().includes("empresarial"))
+    
+    // Aplicar correção apenas se todas as condições forem verdadeiras
+    if (isDateInRange && isTiktokIncluded && isEmpresarialIncluded) {
+      investment = Math.max(0, investment - ERROR_CORRECTION_AMOUNT)
+    }
     
     return {
       investment,
@@ -465,7 +485,7 @@ const CriativosTikTok: React.FC = () => {
       vtr: 0,
       txEngaj: 0,
     }
-  }, [filteredData])
+  }, [filteredData, dateRange, selectedModalidades])
 
   if (filteredData.length > 0) {
     totals.avgCpm = totals.impressions > 0 ? totals.investment / (totals.impressions / 1000) : 0

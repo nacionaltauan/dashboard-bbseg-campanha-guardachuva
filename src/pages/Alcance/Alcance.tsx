@@ -156,6 +156,23 @@ const Alcance: React.FC = () => {
           return parsed
         }
 
+        // Helper para buscar campo no objeto com múltiplas variações (case-insensitive)
+        const getCostValue = (item: any) => {
+          const costKeys = ["Total spent", "Total Spent", "TOTAL SPENT", "total spent", "Cost", "cost", "COST"]
+          for (const key of costKeys) {
+            // Busca exata primeiro
+            if (item[key] !== undefined && item[key] !== null && item[key] !== "") {
+              return item[key]
+            }
+            // Busca case-insensitive
+            const foundKey = Object.keys(item).find(k => k.toLowerCase() === key.toLowerCase())
+            if (foundKey && item[foundKey] !== undefined && item[foundKey] !== null && item[foundKey] !== "") {
+              return item[foundKey]
+            }
+          }
+          return ""
+        }
+
         const processed: ProcessedData[] = dataAsObjects
           .map((item: any) => {
 
@@ -182,7 +199,7 @@ const Alcance: React.FC = () => {
               platform: item["Veículo"] || "Outros", // Mudança aqui - usar "Veículo" em vez de "Plataforma"
               campaignName: item["Campaign name"] || "",
               impressions: parseInteger(item["Impressions"]),
-              cost: parseNumber(item["Total spent"]), // Mudança aqui - usar "Total spent" em vez de "Cost"
+              cost: parseNumber(getCostValue(item)), // Busca múltiplas variações de nome de coluna
               reach: parseInteger(item["Reach"]),
               clicks: parseInteger(item["Clicks"]), // Mudança aqui - usar "Clicks" em vez de "Link clicks"
               frequency: 0, // Será calculado depois: impressions / reach
@@ -477,16 +494,38 @@ const Alcance: React.FC = () => {
     const totalImpressionsForFreq = alcanceTotals.tiktok.impressions + alcanceTotals.meta.impressions + otherImpressions
     const avgFrequency = totalImpressionsForFreq > 0 && totalReach > 0 ? totalImpressionsForFreq / totalReach : 0
 
+    // Correção cirúrgica: Descontar R$ 10.545,17 do TikTok/Empresarial em 13/12/2025
+    const ERROR_CORRECTION_AMOUNT = 10545.17
+    const ERROR_DATE = "2025-12-13"
+    
+    // Verificar se a data do erro está dentro do range selecionado
+    const isDateInRange = (!dateRange.start || dateRange.start <= ERROR_DATE) && 
+                          (!dateRange.end || dateRange.end >= ERROR_DATE)
+    
+    // Verificar se TikTok está incluído nos filtros (array vazio = todos selecionados)
+    const isTiktokIncluded = selectedPlatforms.length === 0 || 
+                             selectedPlatforms.some(p => p.toLowerCase().includes("tiktok"))
+    
+    // Verificar se Empresarial está incluído nos filtros (array vazio = todos selecionados)
+    const isEmpresarialIncluded = selectedModalidades.length === 0 || 
+                                  selectedModalidades.some(m => m.toLowerCase().includes("empresarial"))
+    
+    // Aplicar correção apenas se todas as condições forem verdadeiras
+    let finalInvestment = totalInvestment
+    if (isDateInRange && isTiktokIncluded && isEmpresarialIncluded) {
+      finalInvestment = Math.max(0, finalInvestment - ERROR_CORRECTION_AMOUNT)
+    }
+
     return {
-      investment: totalInvestment,
+      investment: finalInvestment,
       impressions: totalImpressions,
       reach: totalReach,
       frequency: avgFrequency,
       visualizacoes100: totalVisualizacoes100,
-      avgCpm: totalImpressions > 0 ? totalInvestment / (totalImpressions / 1000) : 0,
-      avgCpv: totalVisualizacoes100 > 0 ? totalInvestment / totalVisualizacoes100 : 0,
+      avgCpm: totalImpressions > 0 ? finalInvestment / (totalImpressions / 1000) : 0,
+      avgCpv: totalVisualizacoes100 > 0 ? finalInvestment / totalVisualizacoes100 : 0,
     }
-  }, [filteredData, alcanceTotals])
+  }, [filteredData, alcanceTotals, dateRange, selectedPlatforms, selectedModalidades])
 
   // Função para formatar números
   const formatNumber = (value: number): string => {
