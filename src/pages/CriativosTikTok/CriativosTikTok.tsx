@@ -157,11 +157,32 @@ const CriativosTikTok: React.FC = () => {
       return isNaN(n) ? 0 : n
     }
 
+    // Helper para buscar header case-insensitive
+    const getHeaderIndex = (headers: string[], keys: string[]): number => {
+      for (const key of keys) {
+        const idx = headers.findIndex(h => 
+          h === key || 
+          h.trim() === key.trim() || 
+          h.toLowerCase() === key.toLowerCase()
+        )
+        if (idx >= 0) return idx
+      }
+      return -1
+    }
+
     const mapped: CreativeData[] = rows.map((row: string[]) => {
       const get = (field: string) => {
         const idx = headers.indexOf(field)
         return idx >= 0 ? (row[idx] ?? "") : ""
       }
+      
+      // Helper para buscar campo com múltiplas variações (case-insensitive)
+      const getCost = () => {
+        const costKeys = ["Cost", "Total spent", "Total Spent", "TOTAL SPENT", "total spent"]
+        const idx = getHeaderIndex(headers, costKeys)
+        return idx >= 0 ? (row[idx] ?? "") : ""
+      }
+      
       const thumbnailUrl = get("Video thumbnail URL")
       const thumbnailUrlHttps = thumbnailUrl ? thumbnailUrl.replace(/^http:\/\//i, 'https://') : ""
       
@@ -175,7 +196,7 @@ const CriativosTikTok: React.FC = () => {
         modalidade: get("Modalidade") || "",
         impressions: parseInteger(get("Impressions")),
         clicks: parseInteger(get("Clicks")),
-        cost: parseNumber(get("Cost") || get("Total spent")),
+        cost: parseNumber(getCost()),
         cpc: parseNumber(get("CPC")),
         cpm: parseNumber(get("CPM")),
         reach: parseInteger(get("Reach")),

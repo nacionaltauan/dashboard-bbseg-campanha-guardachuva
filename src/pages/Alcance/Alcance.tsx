@@ -194,7 +194,7 @@ const Alcance: React.FC = () => {
               modalidade: item["Modalidade"] || "Outros",
             } as ProcessedData
           })
-          .filter((item: ProcessedData) => item.date && item.impressions > 0)
+          .filter((item: ProcessedData) => item.date)
 
         // Calcular métricas derivadas
         processed.forEach((item) => {

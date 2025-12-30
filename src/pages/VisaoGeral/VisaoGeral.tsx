@@ -205,7 +205,7 @@ const VisaoGeral: React.FC = () => {
             modalidade: row[headers.indexOf("Modalidade")] || "Nacional",
           }
         })
-        .filter((item: ProcessedData) => item.date && item.impressions > 0)
+        .filter((item: ProcessedData) => item.date)
 
       setProcessedData(processed)
 
