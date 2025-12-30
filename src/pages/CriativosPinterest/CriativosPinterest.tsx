@@ -112,7 +112,8 @@ const CriativosPinterest: React.FC = () => {
         date: getAny(["Date", "Data", "Day"]),
         campaignName: getAny(["Campaign name", "Campaign"]),
         adGroupName: getAny(["Ad group name", "Ad group"]),
-        adName: getAny(["Creative title", "Ad name", "Pin title"]),
+        adName: getAny(["Promoted pin name", "Creative title", "Ad name", "Pin title"]),
+        modalidade: getAny(["Modalidade"]) || "",
         videoThumbnailUrl: "", // Não tem na aba tratado geralmente, mas mantemos interface
         impressions: parseInteger(getAny(["Impressions", "Impr."])),
         clicks: parseInteger(getAny(["Clicks", "Link clicks"])),
@@ -121,7 +122,7 @@ const CriativosPinterest: React.FC = () => {
         cpm: 0, // Será calculado
         reach: parseInteger(getAny(["Reach", "Alcance"])), // Pode não ter na aba tratado, mas tentamos
         frequency: 0, // Será calculado
-        results: parseInteger(getAny(["Total engagements", "Engagements", "Results"])),
+        results: parseInteger(getAny(["Engagements", "Total engagements", "Results"])),
         videoViews: parseInteger(getAny(["Video views", "Views"])),
         videoViews100: parseInteger(getAny(["Video views at 100%", "Video completions", "Plays at 100%"])),
         
@@ -186,26 +187,18 @@ const CriativosPinterest: React.FC = () => {
       })
     }
 
-    // Detectar modalidades
+    // Extrair modalidades disponíveis da coluna Modalidade
     const modalidadeSet = new Set<string>()
     processed.forEach((item) => {
-      const detectedModalidade = detectModalidadeFromCreative(item.adName)
-      if (detectedModalidade) {
-        modalidadeSet.add(detectedModalidade)
+      if (item.modalidade) {
+        modalidadeSet.add(item.modalidade.toLowerCase())
       }
     })
     setAvailableModalidades(Array.from(modalidadeSet).filter(Boolean).sort())
 
   }, [apiData])
 
-  const detectModalidadeFromCreative = (adName: string): string | null => {
-    if (!adName) return null
-    const lowerAdName = adName.toLowerCase()
-    if (lowerAdName.includes("empresarial")) return "empresarial"
-    if (lowerAdName.includes("residencial")) return "residencial"
-    if (lowerAdName.includes("vida")) return "vida"
-    return null
-  }
+  // Função removida: Agora usamos a coluna "Modalidade" diretamente da planilha
 
   const toggleModalidade = (modalidade: string) => {
     setSelectedModalidades((prev) => {
@@ -237,11 +230,11 @@ const CriativosPinterest: React.FC = () => {
       })
     }
 
-    // Filtro Modalidade
+    // Filtro Modalidade (usando coluna Modalidade)
     if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const mod = detectModalidadeFromCreative(item.adName)
-        return mod && selectedModalidades.includes(mod)
+        const modalidade = item.modalidade?.toLowerCase()
+        return modalidade && selectedModalidades.includes(modalidade)
       })
     }
 

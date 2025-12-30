@@ -18,6 +18,7 @@ interface CreativeData {
   adName: string
   adText: string
   videoThumbnailUrl: string
+  modalidade: string
   impressions: number
   clicks: number
   cost: number
@@ -69,7 +70,7 @@ const CriativosTikTok: React.FC = () => {
 
   // Função para obter dados de benchmark do TikTok
   const getBenchmarkData = (creative: CreativeData) => {
-    const modalidade = detectModalidadeFromCreative(creative.adName)
+    const modalidade = creative.modalidade?.toLowerCase()
     if (!modalidade) return null
     
     const key = `TIK TOK_${modalidade}`
@@ -127,6 +128,7 @@ const CriativosTikTok: React.FC = () => {
         adName: get("Creative title"),
         adText: get("Ad text"),
         videoThumbnailUrl: get("Video thumbnail URL"),
+        modalidade: get("Modalidade") || "",
         impressions: parseInteger(get("Impressions")),
         clicks: parseInteger(get("Clicks")),
         cost: parseNumber(get("Total spent")),
@@ -140,7 +142,7 @@ const CriativosTikTok: React.FC = () => {
         videoViews25: parseInteger(get("Video views at 25%")),
         videoViews50: parseInteger(get("Video views at 50%")),
         videoViews75: parseInteger(get("Video views at 75%")),
-        videoViews100: parseInteger(get("Video completions ")),
+        videoViews100: parseInteger(get("Video views at 100%") || get("Video completions ")),
         profileVisits: parseInteger(get("Profile visits")),
         paidLikes: parseInteger(get("Paid likes")),
         paidComments: parseInteger(get("Paid comments")),
@@ -198,12 +200,11 @@ const CriativosTikTok: React.FC = () => {
       })
     }
 
-    // Detectar modalidades disponíveis baseadas nos criativos
+    // Extrair modalidades disponíveis da coluna Modalidade
     const modalidadeSet = new Set<string>()
     processed.forEach((item) => {
-      const detectedModalidade = detectModalidadeFromCreative(item.adName)
-      if (detectedModalidade) {
-        modalidadeSet.add(detectedModalidade)
+      if (item.modalidade) {
+        modalidadeSet.add(item.modalidade.toLowerCase())
       }
     })
     const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
@@ -219,28 +220,7 @@ const CriativosTikTok: React.FC = () => {
     setAvailableTipos(tipos)
   }, [apiData])
 
-  // Função para detectar modalidade baseada no nome do criativo
-  const detectModalidadeFromCreative = (adName: string): string | null => {
-    if (!adName) return null
-    
-    // Converter para minúsculo para padronizar a checagem
-    const lowerAdName = adName.toLowerCase()
-    
-    // Regras de modalidade
-    if (lowerAdName.includes("empresarial")) {
-      return "empresarial"
-    }
-    
-    if (lowerAdName.includes("residencial")) {
-      return "residencial"
-    }
-    
-    if (lowerAdName.includes("vida")) {
-      return "vida"
-    }
-    
-    return null
-  }
+  // Função removida: Agora usamos a coluna "Modalidade" diretamente da planilha
 
   const toggleModalidade = (modalidade: string) => {
     setSelectedModalidades((prev) => {
@@ -328,11 +308,11 @@ const CriativosTikTok: React.FC = () => {
       })
     }
 
-    // Filtro por modalidade
+    // Filtro por modalidade (usando coluna Modalidade)
     if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const detectedModalidade = detectModalidadeFromCreative(item.adName)
-        return detectedModalidade && selectedModalidades.includes(detectedModalidade)
+        const modalidade = item.modalidade?.toLowerCase()
+        return modalidade && selectedModalidades.includes(modalidade)
       })
     }
 

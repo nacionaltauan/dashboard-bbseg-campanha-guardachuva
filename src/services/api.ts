@@ -943,8 +943,9 @@ export const fetchAlcanceMetaData = async () => {
 
 export const fetchTikTokNacionalData = async () => {
   try {
+    const rangeName = encodeURIComponent("Tiktok nao tratado")
     const response = await apiNacional.get(
-      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Tiktok_tratado",
+      `/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=${rangeName}`,
     )
     return response.data
   } catch (error) {
@@ -955,8 +956,9 @@ export const fetchTikTokNacionalData = async () => {
 
 export const fetchPinterestNacionalData = async () => {
   try {
+    const rangeName = encodeURIComponent("Pinterest_nao_tratado")
     const response = await apiNacional.get(
-      "/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=Pinterest_tratado",
+      `/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=${rangeName}`,
     )
     return response.data
   } catch (error) {
@@ -1150,8 +1152,8 @@ export const fetchMetaTratadoData = async () => {
 // NOVA FUNÇÃO para buscar dados do Meta - Não Tratado
 export const fetchMetaNaoTratadoData = async () => {
   try {
-    // Usar o novo nome da aba: "Meta não tratado [Import]"
-    const rangeName = encodeURIComponent("Meta não tratado [Import]")
+    // Usar o novo nome da aba: "Meta não tratado [Merge]"
+    const rangeName = encodeURIComponent("Meta não tratado [Merge]")
     const response = await apiNacional.get(
       `/google/sheets/1wNHPGsPX3wQuUCBs3an7iBzBY6Y7THYV7V1GijXZo44/data?range=${rangeName}`,
     )

@@ -35,6 +35,7 @@ interface CreativeDataUntreated {
   date: string
   campaignName: string
   creativeTitle: string
+  modalidade: string
   reach: number
   impressions: number
   clicks: number
@@ -112,11 +113,11 @@ const CriativosMeta: FC = () => {
   }, [benchmarkData])
 
   // Função para obter dados de benchmark
-  const getBenchmarkData = (creative: CreativeData) => {
-    const modalidade = detectModalidadeFromCreative(creative.creativeTitle)
+  const getBenchmarkData = (creative: CreativeData | CreativeDataUntreated) => {
+    const modalidade = 'modalidade' in creative ? creative.modalidade : null
     if (!modalidade) return null
     
-    const key = `META_${modalidade}`
+    const key = `META_${modalidade.toLowerCase()}`
     return benchmarkMap.get(key)
   }
 
@@ -189,7 +190,7 @@ const CriativosMeta: FC = () => {
           const creativeTitle = getValueByColumnName(row, ["Ad name", "Nome do Anúncio", "Creative title"]) || ""
           const reach = parseInteger(getValueByColumnName(row, ["Reach", "Alcance"]))
           const impressions = parseInteger(getValueByColumnName(row, ["Impressions", "Impressões", "Impressoes"]))
-          const clicks = parseInteger(getValueByColumnName(row, ["Clicks (all)", "Clicks", "Cliques"]))
+          const clicks = parseInteger(getValueByColumnName(row, ["Link clicks", "Clicks (all)", "Clicks", "Cliques"]))
           const totalSpent = parseNumber(getValueByColumnName(row, ["Cost", "Total spent", "Custo", "Gasto Total"]))
           const videoViews = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video views"]))
           const videoViews25 = parseInteger(getValueByColumnName(row, ["Video watches at 25%", "Visualizações a 25%"]))
@@ -199,6 +200,7 @@ const CriativosMeta: FC = () => {
           const videoStarts = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video starts"]))
           const totalEngagements = parseInteger(getValueByColumnName(row, ["Post engagements", "Engajamentos", "Total engagements"]))
           const formato = getValueByColumnName(row, ["Platform position", "Posição da Plataforma", "Formato"]) || ""
+          const modalidade = getValueByColumnName(row, ["Modalidade"]) || ""
           
           // Debug para primeira linha
           if (rows.indexOf(row) === 0) {
@@ -208,6 +210,7 @@ const CriativosMeta: FC = () => {
               creativeTitle,
               impressions,
               formato,
+              modalidade,
               hasImpressions: impressions > 0
             })
           }
@@ -221,6 +224,7 @@ const CriativosMeta: FC = () => {
             date,
             campaignName,
             creativeTitle,
+            modalidade,
             reach,
             impressions,
             clicks,
@@ -297,7 +301,7 @@ const CriativosMeta: FC = () => {
           const creativeTitle = getValueByColumnName(row, ["Ad name", "Nome do Anúncio", "Creative title"]) || ""
           const reach = parseInteger(getValueByColumnName(row, ["Reach", "Alcance"]))
           const impressions = parseInteger(getValueByColumnName(row, ["Impressions", "Impressões", "Impressoes"]))
-          const clicks = parseInteger(getValueByColumnName(row, ["Clicks (all)", "Clicks", "Cliques"]))
+          const clicks = parseInteger(getValueByColumnName(row, ["Link clicks", "Clicks (all)", "Clicks", "Cliques"]))
           const totalSpent = parseNumber(getValueByColumnName(row, ["Cost", "Total spent", "Custo", "Gasto Total"]))
           const videoViews = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video views"]))
           const videoViews25 = parseInteger(getValueByColumnName(row, ["Video watches at 25%", "Visualizações a 25%"]))
@@ -307,6 +311,7 @@ const CriativosMeta: FC = () => {
           const videoStarts = parseInteger(getValueByColumnName(row, ["Three-second video views", "Visualizações de 3 segundos", "Video starts"]))
           const totalEngagements = parseInteger(getValueByColumnName(row, ["Post engagements", "Engajamentos", "Total engagements"]))
           const formato = getValueByColumnName(row, ["Platform position", "Posição da Plataforma", "Formato"]) || ""
+          const modalidade = getValueByColumnName(row, ["Modalidade"]) || ""
           
           // Debug para primeira linha
           if (rows.indexOf(row) === 0) {
@@ -316,6 +321,7 @@ const CriativosMeta: FC = () => {
               creativeTitle,
               impressions,
               formato,
+              modalidade,
               hasImpressions: impressions > 0
             })
           }
@@ -329,6 +335,7 @@ const CriativosMeta: FC = () => {
             date,
             campaignName,
             creativeTitle,
+            modalidade,
             reach,
             impressions,
             clicks,
@@ -356,6 +363,17 @@ const CriativosMeta: FC = () => {
       console.log("Dados processados Untreated:", filtered.length)
       console.log("Amostra dados Untreated:", filtered.slice(0, 3))
       setProcessedDataUntreated(filtered)
+
+      // Extrair modalidades únicas da coluna Modalidade
+      const modalidadeSet = new Set<string>()
+      filtered.forEach((item) => {
+        if (item.modalidade) {
+          modalidadeSet.add(item.modalidade.toLowerCase())
+        }
+      })
+      const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
+      console.log("Modalidades disponíveis:", modalidades)
+      setAvailableModalidades(modalidades)
 
       // Extrair formatos únicos
       const formatoSet = new Set<string>()
@@ -453,41 +471,11 @@ const CriativosMeta: FC = () => {
         setDateRange({ start: startDate, end: endDate })
       }
 
-      // Detectar modalidades disponíveis baseadas nos criativos
-      const modalidadeSet = new Set<string>()
-      processed.forEach((item) => {
-        const detectedModalidade = detectModalidadeFromCreative(item.creativeTitle)
-        if (detectedModalidade) {
-          modalidadeSet.add(detectedModalidade)
-        }
-      })
-      const modalidades = Array.from(modalidadeSet).filter(Boolean).sort()
-      setAvailableModalidades(modalidades)
+      // Nota: Modalidades serão extraídas dos dados não tratados que têm a coluna Modalidade
     }
   }, [apiData])
 
-  // Função para detectar modalidade baseada no nome do criativo
-  const detectModalidadeFromCreative = (creativeTitle: string): string | null => {
-    if (!creativeTitle) return null
-    
-    // Converter para minúsculo para padronizar a checagem
-    const lowerCreative = creativeTitle.toLowerCase()
-    
-    // Regras de modalidade
-    if (lowerCreative.includes("empresarial")) {
-      return "empresarial"
-    }
-    
-    if (lowerCreative.includes("residencial")) {
-      return "residencial"
-    }
-    
-    if (lowerCreative.includes("vida")) {
-      return "vida"
-    }
-    
-    return null
-  }
+  // Função removida: Agora usamos a coluna "Modalidade" diretamente da planilha
 
   const toggleModalidade = (modalidade: string) => {
     setSelectedModalidades((prev) => {
@@ -542,11 +530,11 @@ const CriativosMeta: FC = () => {
       })
     }
 
-    // Filtro por modalidade
+    // Filtro por modalidade (usando coluna Modalidade)
     if (selectedModalidades.length > 0) {
       filtered = filtered.filter((item) => {
-        const detectedModalidade = detectModalidadeFromCreative(item.creativeTitle)
-        return detectedModalidade && selectedModalidades.includes(detectedModalidade)
+        const modalidade = 'modalidade' in item ? item.modalidade?.toLowerCase() : null
+        return modalidade && selectedModalidades.includes(modalidade)
       })
     }
 
