@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useMemo, useRef } from "react"
-import { Globe, BarChart3, Tv, Smartphone, Monitor, Eye, Play, MousePointer, Users, Calendar, MapPin } from "lucide-react"
+import { Globe, BarChart3, Tv, Smartphone, Monitor, Eye, Play, MousePointer, Users, Calendar, MapPin, Gift } from "lucide-react"
 import { useEstrategiaOnlineData } from "../../services/api"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
 import Loading from "../../components/Loading/Loading"
@@ -27,13 +27,16 @@ interface VehicleData {
 interface CampaignSummary {
   totalInvestimentoPrevisto: number
   totalCustoInvestido: number
+  totalInvestimentoBonificado: number
   pacingGeral: number
   mesesAtivos: number
 }
 
 interface AggregatedVehicleData {
   veiculo: string
-  custoInvestido: number
+  custoInvestido: number // Com teto (até 100% do previsto)
+  custoInvestidoReal: number // Sem teto (valor real gasto)
+  investimentoBonificado: number // Excedente (Real - Previsto, se > 0)
   custoPrevisto: number
   pacing: number
   shareInvestimentoTotal: number
@@ -53,6 +56,7 @@ const EstrategiaOnline: React.FC = () => {
   const [campaignSummary, setCampaignSummary] = useState<CampaignSummary>({
     totalInvestimentoPrevisto: 0,
     totalCustoInvestido: 0,
+    totalInvestimentoBonificado: 0,
     pacingGeral: 0,
     mesesAtivos: 0,
   })
@@ -186,20 +190,23 @@ const EstrategiaOnline: React.FC = () => {
       // Calcular resumo da campanha
       const totalGeralPrevisto = processed.reduce((sum, v) => sum + v.custoPrevisto, 0)
       
-      // 1. Total Real (para exibição no Card de Custo Realizado) - SEM TETO
-      // Deve exibir o valor total gasto, mesmo que ultrapasse o previsto
+      // 1. Total Real (sem teto) - para cálculo do bonificado
       const totalGeralInvestidoReal = processed.reduce((sum, v) => sum + v.custoInvestido, 0)
 
-      // 2. Total com Teto (apenas para cálculo do Pacing Geral)
-      // Garante que o pacing não ultrapasse 100% visualmente no card
+      // 2. Total com Teto (para Card "Custo Realizado" e Pacing Geral)
+      // Aplica teto individualmente por veículo: Math.min(custoInvestido, custoPrevisto)
       const totalGeralInvestidoCapped = processed.reduce((sum, v) => {
-        const investidoClamp = v.custoInvestido > v.custoPrevisto ? v.custoPrevisto : v.custoInvestido
+        const investidoClamp = Math.min(v.custoInvestido, v.custoPrevisto)
         return sum + investidoClamp
       }, 0)
 
+      // 3. Total Bonificado (diferença entre Real e Capped)
+      const totalBonificado = totalGeralInvestidoReal - totalGeralInvestidoCapped
+
       const summary: CampaignSummary = {
         totalInvestimentoPrevisto: totalGeralPrevisto,
-        totalCustoInvestido: totalGeralInvestidoReal, // Exibe o valor Real (pode ser > previsto)
+        totalCustoInvestido: totalGeralInvestidoCapped, // Card mostra valor com teto
+        totalInvestimentoBonificado: totalBonificado, // Novo card
         pacingGeral: totalGeralPrevisto > 0 ? (totalGeralInvestidoCapped / totalGeralPrevisto) * 100 : 0, // Pacing travado em 100%
         mesesAtivos: 0, 
       }
@@ -226,7 +233,9 @@ const EstrategiaOnline: React.FC = () => {
       if (!aggregated[key]) {
         aggregated[key] = {
           veiculo: vehicle.veiculo,
-          custoInvestido: 0,
+          custoInvestido: 0, // Com teto
+          custoInvestidoReal: 0, // Sem teto
+          investimentoBonificado: 0, // Excedente
           custoPrevisto: 0,
           pacing: 0,
           shareInvestimentoTotal: 0,
@@ -234,19 +243,21 @@ const EstrategiaOnline: React.FC = () => {
         }
       }
 
-      aggregated[key].custoInvestido += vehicle.custoInvestido
+      aggregated[key].custoInvestidoReal += vehicle.custoInvestido // Soma real (sem teto)
       aggregated[key].custoPrevisto += vehicle.custoPrevisto
     })
 
-    // Calcular pacing e shares
+    // Calcular pacing, shares e bonificação
     const totalPrevisto = Object.values(aggregated).reduce((sum, v) => sum + v.custoPrevisto, 0)
 
     Object.values(aggregated).forEach((vehicle) => {
-      // Regra de visualização: Custo Investido nunca deve ser visualmente maior que Custo Previsto
-      if (vehicle.custoInvestido > vehicle.custoPrevisto) {
-        vehicle.custoInvestido = vehicle.custoPrevisto
-      }
+      // Aplicar teto: Custo Investido (com teto) = min(Real, Previsto)
+      vehicle.custoInvestido = Math.min(vehicle.custoInvestidoReal, vehicle.custoPrevisto)
+      
+      // Calcular investimento bonificado (excedente)
+      vehicle.investimentoBonificado = Math.max(0, vehicle.custoInvestidoReal - vehicle.custoPrevisto)
 
+      // Pacing baseado no custo com teto (nunca passa de 100%)
       vehicle.pacing = vehicle.custoPrevisto > 0 ? (vehicle.custoInvestido / vehicle.custoPrevisto) * 100 : 0
       vehicle.shareInvestimentoTotal = totalPrevisto > 0 ? (vehicle.custoPrevisto / totalPrevisto) * 100 : 0
     })
@@ -256,11 +267,12 @@ const EstrategiaOnline: React.FC = () => {
 
   // Calcular totais filtrados
   const filteredTotals = useMemo(() => {
-    const totalInvestido = aggregatedVehicleData.reduce((sum, v) => sum + v.custoInvestido, 0)
+    const totalInvestido = aggregatedVehicleData.reduce((sum, v) => sum + v.custoInvestido, 0) // Com teto
+    const totalBonificado = aggregatedVehicleData.reduce((sum, v) => sum + v.investimentoBonificado, 0)
     const totalPrevisto = aggregatedVehicleData.reduce((sum, v) => sum + v.custoPrevisto, 0)
     const pacing = totalPrevisto > 0 ? (totalInvestido / totalPrevisto) * 100 : 0
 
-    return { totalInvestido, totalPrevisto, pacing }
+    return { totalInvestido, totalBonificado, totalPrevisto, pacing }
   }, [aggregatedVehicleData])
 
   // Função para formatar valores monetários
@@ -353,7 +365,7 @@ const EstrategiaOnline: React.FC = () => {
       </div>
 
       {/* Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Investimento Previsto */}
         <div className="card-overlay rounded-lg shadow-lg p-4">
           <div className="flex items-center justify-between">
@@ -386,6 +398,17 @@ const EstrategiaOnline: React.FC = () => {
               <p className="text-xl font-bold text-gray-900">{campaignSummary.pacingGeral.toFixed(1)}%</p>
             </div>
             <Users className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        {/* Investimento Bonificado */}
+        <div className="card-overlay rounded-lg shadow-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Investimento Bonificado</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(campaignSummary.totalInvestimentoBonificado)}</p>
+            </div>
+            <Gift className="w-8 h-8 text-orange-600" />
           </div>
         </div>
 
@@ -476,11 +499,12 @@ const EstrategiaOnline: React.FC = () => {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[30%]">Veículo</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[18%]">Investimento Previsto</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[12%]">Share (%)</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[18%]">Custo Realizado</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[22%]">Pacing</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-[25%]">Veículo</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[15%]">Investimento Previsto</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[10%]">Share (%)</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[15%]">Custo Realizado</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-700 w-[15%]">Inv. Bonificado</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-700 w-[20%]">Pacing</th>
               </tr>
             </thead>
             <tbody>
@@ -510,6 +534,11 @@ const EstrategiaOnline: React.FC = () => {
                   </td>
                   <td className="py-4 px-4 text-right">
                     <span className="font-semibold text-gray-900">{formatCurrency(vehicle.custoInvestido)}</span>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <span className="font-semibold text-gray-900">
+                      {vehicle.investimentoBonificado > 0 ? formatCurrency(vehicle.investimentoBonificado) : "-"}
+                    </span>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-3 w-full">
@@ -552,6 +581,9 @@ const EstrategiaOnline: React.FC = () => {
                 <td className="py-4 px-4 text-center font-bold text-gray-900">100,00%</td>
                 <td className="py-4 px-4 text-right font-bold text-gray-900">
                   {formatCurrency(filteredTotals.totalInvestido)}
+                </td>
+                <td className="py-4 px-4 text-right font-bold text-gray-900">
+                  {filteredTotals.totalBonificado > 0 ? formatCurrency(filteredTotals.totalBonificado) : "-"}
                 </td>
                 <td className="py-4 px-4 text-center">
                   <span className="font-bold" style={{ color: getPacingColor(filteredTotals.pacing) }}>
