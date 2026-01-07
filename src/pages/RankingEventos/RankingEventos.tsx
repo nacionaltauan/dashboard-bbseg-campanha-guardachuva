@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { 
   Trophy, 
   Calendar, 
@@ -60,6 +60,8 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
   })
 
   const [selectedModalidade, setSelectedModalidade] = useState<string[]>([])
+  const [availableOrigens, setAvailableOrigens] = useState<string[]>([])
+  const [selectedOrigens, setSelectedOrigens] = useState<string[]>([])
 
   // Constante de Data de Corte
   const DATA_CORTE = "2025-12-08"
@@ -154,6 +156,45 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     return selectedModalidade.includes(valorModalidade)
   }
 
+  // Valores únicos de Origem
+  const valoresOrigem = useMemo(() => {
+    if (!eventosReceptivosData?.data?.values || eventosReceptivosData.data.values.length <= 1) return []
+    const headers = eventosReceptivosData.data.values[0]
+    const rows = eventosReceptivosData.data.values.slice(1)
+    const origemIndex = getColumnIndex(headers, "Origem")
+    
+    if (origemIndex === -1) return []
+
+    const valores = new Set<string>()
+    rows.forEach((row: any[]) => {
+      const valor = row[origemIndex]?.toString().trim() || ""
+      if (valor) valores.add(valor)
+    })
+    return Array.from(valores).sort()
+  }, [eventosReceptivosData])
+
+  // Popular availableOrigens quando valoresOrigem mudar
+  useEffect(() => {
+    if (valoresOrigem.length > 0) {
+      setAvailableOrigens(valoresOrigem)
+    }
+  }, [valoresOrigem])
+
+  const toggleOrigem = (valor: string) => {
+    setSelectedOrigens((prev) => {
+      if (prev.includes(valor)) return prev.filter((v) => v !== valor)
+      return [...prev, valor]
+    })
+  }
+
+  const passaFiltroOrigem = (row: any[], headers: string[]): boolean => {
+    if (selectedOrigens.length === 0) return true
+    const origemIndex = getColumnIndex(headers, "Origem")
+    if (origemIndex === -1) return true
+    const valorOrigem = row[origemIndex]?.toString().trim() || ""
+    return selectedOrigens.includes(valorOrigem)
+  }
+
   // --- Processamento Principal ---
 
   const processedData = useMemo(() => {
@@ -204,6 +245,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
       
       if (!isDateInRange(date)) return
       if (!passaFiltroModalidade(row, headers)) return
+      if (!passaFiltroOrigem(row, headers)) return
 
       const eventName = (row[eventNameIndex] || "").toString().trim()
       const eventCount = parseInt(row[eventCountIndex]) || 0
@@ -276,7 +318,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     counts["btn_whatsapp_flutuante_vida"] = totalWppFlutuanteVida
 
     return counts
-  }, [eventosReceptivosData, dateRange, selectedModalidade])
+  }, [eventosReceptivosData, dateRange, selectedModalidade, selectedOrigens])
 
   // --- Top 3 Data (Podium) ---
   const top3Data = useMemo(() => {
@@ -322,6 +364,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
     rows.forEach((row: any[]) => {
       const date = row[dateIndex] || ""
       if (!isDateInRange(date)) return
+      if (!passaFiltroOrigem(row, headers)) return
 
       const eventName = (row[eventNameIndex] || "").toString().trim()
       const eventCount = parseInt(row[eventCountIndex]) || 0
@@ -416,7 +459,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
       vida: getTop3(countsVida),
       empresarial: getTop3(countsEmpresarial)
     }
-  }, [eventosReceptivosData, dateRange])
+  }, [eventosReceptivosData, dateRange, selectedOrigens])
 
   // --- Categorização e Estruturação ---
 
@@ -577,7 +620,7 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
 
       {/* Filtros */}
       <div className="card-overlay rounded-lg shadow-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center">
               <Calendar className="w-3 h-3 mr-1" /> Período
@@ -613,6 +656,26 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
                   }`}
                 >
                   {mod}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center">
+              <Filter className="w-3 h-3 mr-1" /> Origem
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableOrigens.map((origem) => (
+                <button
+                  key={origem}
+                  onClick={() => toggleOrigem(origem)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedOrigens.includes(origem)
+                      ? "bg-indigo-100 text-indigo-800 border border-indigo-300"
+                      : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200"
+                  }`}
+                >
+                  {origem}
                 </button>
               ))}
             </div>
