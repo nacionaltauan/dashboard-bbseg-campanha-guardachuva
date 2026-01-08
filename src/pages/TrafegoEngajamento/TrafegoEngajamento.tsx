@@ -1280,23 +1280,37 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
         
         // Aplicar correção WhatsApp Flutuante para Residencial
         if (modo === "residencial" && selectedChartMetric === "Wpp Flutuante") {
-          Object.keys(waMeByDate).forEach(date => {
+          // Criar conjunto unificado de todas as datas
+          const allDates = new Set([
+            ...Object.keys(waMeByDate),
+            ...Object.keys(btnWppFundoByDate),
+            ...Object.keys(btnWppFlutuanteByDate)
+          ])
+          
+          allDates.forEach(date => {
             const waMe = waMeByDate[date] || 0
             const btnFundo = btnWppFundoByDate[date] || 0
             const flutuanteReal = btnWppFlutuanteByDate[date] || 0
-            const wppFlutuanteCalculado = Math.max(0, waMe - btnFundo)
-            dailyData[date] = wppFlutuanteCalculado + flutuanteReal
+            const calculadoAntigo = Math.max(0, waMe - btnFundo)
+            dailyData[date] = calculadoAntigo + flutuanteReal
           })
         }
         
         // Aplicar correção WhatsApp Flutuante para Vida
         if (modo === "vida" && selectedChartMetric === "Wpp Flutuante (Vida)") {
-          Object.keys(waMeByDate).forEach(date => {
+          // Criar conjunto unificado de todas as datas
+          const allDates = new Set([
+            ...Object.keys(waMeByDate),
+            ...Object.keys(btnWppFundoByDate),
+            ...Object.keys(btnWppFlutuanteByDate)
+          ])
+          
+          allDates.forEach(date => {
             const waMe = waMeByDate[date] || 0
             const btnFundo = btnWppFundoByDate[date] || 0
             const flutuanteReal = btnWppFlutuanteByDate[date] || 0
-            const wppFlutuanteCalculado = Math.max(0, waMe - btnFundo)
-            dailyData[date] = wppFlutuanteCalculado + flutuanteReal
+            const calculadoAntigo = Math.max(0, waMe - btnFundo)
+            dailyData[date] = calculadoAntigo + flutuanteReal
           })
         }
       }
