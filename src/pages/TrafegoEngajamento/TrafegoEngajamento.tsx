@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
+import { ResponsiveLine } from "@nivo/line"
 import { TrendingUp, Calendar, Users, BarChart3, MessageCircle, HandHeart, Filter, MapPin, XCircle, TrendingDown, Clock, Share2, Megaphone, Headphones, FileText, CheckCircle, UserCheck } from "lucide-react"
 import Loading from "../../components/Loading/Loading"
 import PDFDownloadButton from "../../components/PDFDownloadButton/PDFDownloadButton"
@@ -69,6 +70,7 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
 
   const [selectedColunaQ, setSelectedColunaQ] = useState<string[]>([])
   const [selectedModalidade, setSelectedModalidade] = useState<string[]>([])
+  const [selectedChartMetric, setSelectedChartMetric] = useState<string>("Sessões")
 
   // Função para normalizar data para formato YYYY-MM-DD
   const normalizeDate = (dateStr: string | number | undefined | null): string | null => {
@@ -1116,6 +1118,212 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
     return value.toLocaleString("pt-BR")
   }
 
+  // Função para obter métricas disponíveis baseado no modo
+  const getAvailableMetrics = (): string[] => {
+    const modo = detectarModoVisualizacao()
+    const baseMetrics = ["Sessões", "First Visit", "Sessões Engajadas", "Rejeições"]
+    
+    if (modo === "default") {
+      return [...baseMetrics, "Btn Canais Footer", "Btn Ouvidoria", "Btn SAC", "Preenchimento Form"]
+    } else if (modo === "residencial") {
+      return [...baseMetrics, "Quero Contratar 1", "Sou Cliente BB", "Não Sou Cliente", "Wpp Flutuante", "Quero Contratar 2", "Wpp Fundo"]
+    } else if (modo === "vida") {
+      return [...baseMetrics, "Quero Contratar 1 (Vida)", "Sou Cliente BB (Vida)", "Não Sou Cliente (Vida)", "Wpp Flutuante (Vida)", "Quero Contratar 2 (Vida)", "Wpp Fundo (Vida)"]
+    }
+    
+    return baseMetrics
+  }
+
+  // Processar dados diários para o gráfico
+  const dailyChartData = useMemo(() => {
+    const modo = detectarModoVisualizacao()
+    const dailyData: Record<string, number> = {}
+    
+    // Processar dados do GA4 (Sessões, Sessões Engajadas, Rejeições)
+    if (ga4ReceptivosData?.data?.values && ga4ReceptivosData.data.values.length > 1) {
+      const headers = ga4ReceptivosData.data.values[0]
+      const rows = ga4ReceptivosData.data.values.slice(1)
+      
+      const dateIndex = getColumnIndex(headers, "Date")
+      const sessionsIndex = getColumnIndex(headers, "Sessions")
+      const engagedSessionsIndex = getColumnIndex(headers, "Engaged sessions")
+      const bouncesIndex = getColumnIndex(headers, "Bounces")
+      
+      if (dateIndex !== -1) {
+        rows.forEach((row: any[]) => {
+          const date = row[dateIndex] || ""
+          if (!isDateInRange(date)) return
+          if (!passaFiltroOrigem(row, headers)) return
+          if (!passaFiltroModalidade(row, headers)) return
+          
+          const normalizedDate = normalizeDate(date)
+          if (!normalizedDate) return
+          
+          if (selectedChartMetric === "Sessões" && sessionsIndex !== -1) {
+            const sessions = Number.parseInt(row[sessionsIndex]) || 0
+            dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + sessions
+          } else if (selectedChartMetric === "Sessões Engajadas" && engagedSessionsIndex !== -1) {
+            const engaged = Number.parseInt(row[engagedSessionsIndex]) || 0
+            dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + engaged
+          } else if (selectedChartMetric === "Rejeições" && bouncesIndex !== -1) {
+            const bounces = Number.parseInt(row[bouncesIndex]) || 0
+            dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + bounces
+          }
+        })
+      }
+    }
+    
+    // Processar dados de Eventos (First Visit e eventos de botão)
+    if (eventosReceptivosData?.data?.values && eventosReceptivosData.data.values.length > 1) {
+      const headers = eventosReceptivosData.data.values[0]
+      const rows = eventosReceptivosData.data.values.slice(1)
+      
+      const dateIndex = getColumnIndex(headers, "Date")
+      const eventNameIndex = getColumnIndex(headers, "Event name")
+      const eventCountIndex = getColumnIndex(headers, "Event count")
+      const modalidadeIndex = getColumnIndex(headers, "Modalidade")
+      let linkUrlIndex = getColumnIndex(headers, "Link URL")
+      if (linkUrlIndex === -1) linkUrlIndex = getColumnIndex(headers, "Link_URL")
+      
+      if (dateIndex !== -1 && eventNameIndex !== -1 && eventCountIndex !== -1) {
+        // Acumuladores para correção WhatsApp
+        const waMeByDate: Record<string, number> = {}
+        const btnWppFundoByDate: Record<string, number> = {}
+        const btnWppFlutuanteByDate: Record<string, number> = {}
+        
+        rows.forEach((row: any[]) => {
+          const date = row[dateIndex] || ""
+          if (!isDateInRange(date)) return
+          if (!passaFiltroOrigem(row, headers)) return
+          if (!passaFiltroModalidade(row, headers)) return
+          
+          const normalizedDate = normalizeDate(date)
+          if (!normalizedDate) return
+          
+          const eventName = (row[eventNameIndex] || "").toString().trim()
+          const eventCount = Number.parseInt(row[eventCountIndex]) || 0
+          const modalidadeLinha = modalidadeIndex !== -1 ? (row[modalidadeIndex] || "").toString().trim() : ""
+          const isPeriodoAntigo = normalizedDate <= DATA_CORTE
+          
+          // First Visit
+          if (selectedChartMetric === "First Visit" && eventName === "first_visit") {
+            dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+          }
+          
+          // Eventos Default
+          if (modo === "default") {
+            if (selectedChartMetric === "Btn Canais Footer" && eventName === "Button_Canais_Digitais_Footer") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Btn Ouvidoria" && eventName === "Button_Ouv_Footer") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Btn SAC" && eventName === "Button_SAC_Footer") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Preenchimento Form" && eventName === "preenchimento_form") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            }
+          }
+          
+          // Eventos Residencial
+          if (modo === "residencial") {
+            if (selectedChartMetric === "Quero Contratar 1" && eventName === "cta_quero_contratar_1") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Sou Cliente BB" && eventName === "querocontratar1_sou_cliente_bb") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Não Sou Cliente" && eventName === "querocontratar1_nao_sou_cliente_bb") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Quero Contratar 2" && eventName === "cta_quero_contratar_2") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Wpp Fundo" && eventName === "btn_whatsapp_fundo") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+              if (isPeriodoAntigo) {
+                btnWppFundoByDate[normalizedDate] = (btnWppFundoByDate[normalizedDate] || 0) + eventCount
+              }
+            } else if (selectedChartMetric === "Wpp Flutuante" && eventName === "btn_whatsapp_flutuante") {
+              if (!isPeriodoAntigo) {
+                btnWppFlutuanteByDate[normalizedDate] = (btnWppFlutuanteByDate[normalizedDate] || 0) + eventCount
+              }
+            } else if (selectedChartMetric === "Wpp Flutuante" && eventName === "internal_link_click" && isPeriodoAntigo) {
+              const url = linkUrlIndex !== -1 ? (row[linkUrlIndex] || "").toString().toLowerCase() : ""
+              if (url.includes("wa.me") && modalidadeLinha !== "Vida") {
+                waMeByDate[normalizedDate] = (waMeByDate[normalizedDate] || 0) + eventCount
+              }
+            }
+          }
+          
+          // Eventos Vida
+          if (modo === "vida") {
+            if (selectedChartMetric === "Quero Contratar 1 (Vida)" && eventName === "cta_quero_contratar_1_vida") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Sou Cliente BB (Vida)" && eventName === "querocontratar1_sou_cliente_bb_vida") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Não Sou Cliente (Vida)" && eventName === "querocontratar1_nao_sou_cliente_bb_vida") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Quero Contratar 2 (Vida)" && eventName === "cta_quero_contratar_2_vida") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+            } else if (selectedChartMetric === "Wpp Fundo (Vida)" && eventName === "btn_whatsapp_fundo_vida") {
+              dailyData[normalizedDate] = (dailyData[normalizedDate] || 0) + eventCount
+              if (isPeriodoAntigo) {
+                btnWppFundoByDate[normalizedDate] = (btnWppFundoByDate[normalizedDate] || 0) + eventCount
+              }
+            } else if (selectedChartMetric === "Wpp Flutuante (Vida)" && eventName === "btn_whatsapp_flutuante_vida") {
+              if (!isPeriodoAntigo) {
+                btnWppFlutuanteByDate[normalizedDate] = (btnWppFlutuanteByDate[normalizedDate] || 0) + eventCount
+              }
+            } else if (selectedChartMetric === "Wpp Flutuante (Vida)" && eventName === "internal_link_click" && isPeriodoAntigo) {
+              const url = linkUrlIndex !== -1 ? (row[linkUrlIndex] || "").toString().toLowerCase() : ""
+              if (url.includes("wa.me") && modalidadeLinha === "Vida") {
+                waMeByDate[normalizedDate] = (waMeByDate[normalizedDate] || 0) + eventCount
+              }
+            }
+          }
+        })
+        
+        // Aplicar correção WhatsApp Flutuante para Residencial
+        if (modo === "residencial" && selectedChartMetric === "Wpp Flutuante") {
+          Object.keys(waMeByDate).forEach(date => {
+            const waMe = waMeByDate[date] || 0
+            const btnFundo = btnWppFundoByDate[date] || 0
+            const flutuanteReal = btnWppFlutuanteByDate[date] || 0
+            const wppFlutuanteCalculado = Math.max(0, waMe - btnFundo)
+            dailyData[date] = wppFlutuanteCalculado + flutuanteReal
+          })
+        }
+        
+        // Aplicar correção WhatsApp Flutuante para Vida
+        if (modo === "vida" && selectedChartMetric === "Wpp Flutuante (Vida)") {
+          Object.keys(waMeByDate).forEach(date => {
+            const waMe = waMeByDate[date] || 0
+            const btnFundo = btnWppFundoByDate[date] || 0
+            const flutuanteReal = btnWppFlutuanteByDate[date] || 0
+            const wppFlutuanteCalculado = Math.max(0, waMe - btnFundo)
+            dailyData[date] = wppFlutuanteCalculado + flutuanteReal
+          })
+        }
+      }
+    }
+    
+    // Converter para formato do gráfico
+    const sortedDates = Object.keys(dailyData).sort()
+    const chartData = sortedDates.map(date => ({
+      x: date,
+      y: dailyData[date] || 0
+    }))
+    
+    return [{
+      id: selectedChartMetric,
+      data: chartData
+    }]
+  }, [ga4ReceptivosData, eventosReceptivosData, dateRange, selectedColunaQ, selectedModalidade, selectedChartMetric])
+
+  // Garantir que a métrica selecionada está disponível
+  const availableMetrics = getAvailableMetrics()
+  
+  useEffect(() => {
+    if (!availableMetrics.includes(selectedChartMetric)) {
+      setSelectedChartMetric(availableMetrics[0] || "Sessões")
+    }
+  }, [availableMetrics, selectedChartMetric])
+
   // Componente de gráfico de barras horizontais
   const HorizontalBarChart: React.FC<{
     title: string
@@ -1586,6 +1794,98 @@ if (receptivosError || eventosError) {
           Período selecionado: {new Date(dateRange.start).toLocaleDateString("pt-BR")} até{" "}
           {new Date(dateRange.end).toLocaleDateString("pt-BR")} | Última atualização:{" "}
           {new Date().toLocaleString("pt-BR")}
+        </div>
+      </div>
+
+      {/* Evolução Diária */}
+      <div className="card-overlay rounded-lg shadow-lg p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+            <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
+            Evolução Diária
+          </h3>
+          
+          {/* Seletor de Métricas */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {availableMetrics.map((metric) => (
+              <button
+                key={metric}
+                onClick={() => setSelectedChartMetric(metric)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedChartMetric === metric
+                    ? "bg-purple-100 text-purple-800 border-2 border-purple-300"
+                    : "bg-gray-100 text-gray-600 border-2 border-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                {metric}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Gráfico de Linha */}
+        <div style={{ height: "400px" }}>
+          {dailyChartData.length > 0 && dailyChartData[0].data.length > 0 ? (
+            <ResponsiveLine
+              data={dailyChartData}
+              margin={{ top: 30, right: 30, bottom: 80, left: 100 }}
+              xScale={{ type: "point" }}
+              yScale={{ type: "linear", min: "auto", max: "auto" }}
+              axisBottom={{ 
+                tickSize: 5, 
+                tickPadding: 15, 
+                tickRotation: -45, 
+                legend: "Data", 
+                legendOffset: 60, 
+                legendPosition: "middle" 
+              }}
+              axisLeft={{ 
+                tickSize: 5, 
+                tickPadding: 10, 
+                tickRotation: 0, 
+                legend: selectedChartMetric, 
+                legendOffset: -85, 
+                legendPosition: "middle",
+                format: (value) => formatNumber(value)
+              }}
+              pointSize={8}
+              pointBorderWidth={2}
+              pointBorderColor={{ from: "serieColor" }}
+              useMesh={true}
+              colors={["#8b5cf6"]}
+              lineWidth={3}
+              enableArea={true}
+              areaOpacity={0.1}
+              theme={{ 
+                axis: { 
+                  ticks: { text: { fontSize: 11, fill: "#6b7280" } }, 
+                  legend: { text: { fontSize: 12, fill: "#374151", fontWeight: 600 } } 
+                }, 
+                grid: { line: { stroke: "#e5e7eb", strokeWidth: 1 } } 
+              }}
+              tooltip={({ point }) => {
+                const dateStr = point.data.x as string
+                const date = dateStr ? new Date(dateStr + "T00:00:00") : new Date()
+                return (
+                  <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                    <div className="text-sm font-medium text-gray-900">
+                      Data: {date.toLocaleDateString("pt-BR")}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {selectedChartMetric}: {formatNumber(point.data.y as number)}
+                    </div>
+                  </div>
+                )
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="text-center">
+                <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum dado disponível para o período ou filtros selecionados</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
