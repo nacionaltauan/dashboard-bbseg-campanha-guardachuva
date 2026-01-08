@@ -744,12 +744,21 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
 
       {/* Grid de Categorias */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {categories.map((category) => (
+        {categories.map((category) => {
+          // Calcular o total da categoria
+          const totalCategory = category.items.reduce((acc, item) => acc + item.count, 0)
+          
+          return (
           <div key={category.id} className="card-overlay rounded-lg shadow-lg flex flex-col h-full overflow-hidden">
             {/* Cabeçalho do Card */}
-            <div className={`p-4 border-b ${category.color} flex items-center space-x-2`}>
-              <category.icon className="w-5 h-5 opacity-75" />
-              <h3 className="font-bold">{category.label}</h3>
+            <div className={`p-4 border-b ${category.color} flex items-center justify-between`}>
+              <div className="flex items-center space-x-2">
+                <category.icon className="w-5 h-5 opacity-75" />
+                <h3 className="font-bold">{category.label}</h3>
+              </div>
+              <span className="text-sm font-bold opacity-90 bg-white/50 px-2 py-0.5 rounded-full">
+                {totalCategory.toLocaleString("pt-BR")}
+              </span>
             </div>
             
             {/* Lista de Itens */}
@@ -814,7 +823,8 @@ const RankingEventos: React.FC<RankingEventosProps> = () => {
               })}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
