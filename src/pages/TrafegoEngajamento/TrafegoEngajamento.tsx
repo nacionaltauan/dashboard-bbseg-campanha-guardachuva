@@ -1111,18 +1111,8 @@ const TrafegoEngajamento: React.FC<TrafegoEngajamentoProps> = () => {
   }, [ga4ReceptivosData, dateRange, selectedColunaQ, selectedModalidade])
 
 
-  // Função para formatar números (trunca para baixo, sem arredondar para cima)
+  // Função para formatar números com separadores de milhar no padrão brasileiro
   const formatNumber = (value: number): string => {
-    if (value >= 1000000) {
-      // Trunca para baixo mantendo 1 casa decimal
-      const truncated = Math.floor(value / 100000) / 10
-      return `${truncated} mi`
-    }
-    if (value >= 1000) {
-      // Trunca para baixo mantendo 1 casa decimal
-      const truncated = Math.floor(value / 100) / 10
-      return `${truncated} mil`
-    }
     return value.toLocaleString("pt-BR")
   }
 
